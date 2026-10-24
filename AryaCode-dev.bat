@@ -95,6 +95,28 @@ if not exist "%REPO%\node_modules" (
   echo   [ok] node_modules present
 )
 
+rem --- build artifacts ------------------------------------------------------
+rem  pnpm install only links workspace packages; it does not compile them. The
+rem  desktop host imports built libraries (dsh-app-boot/lib/index.js and its
+rem  siblings), so a dev launch without artifacts fails at the first import.
+rem  app-boot's lib is the canary: if it is absent nothing else is built either.
+if not exist "%REPO%\packages\boot\app-boot\lib\index.js" (
+  echo.
+  echo   [..] workspace artifacts are missing. Building them - this takes several minutes.
+  pushd "%REPO%"
+  call pnpm run build:artifacts
+  if errorlevel 1 (
+    popd
+    echo.
+    echo   [X] build:artifacts failed. Scroll up for the first error.
+    goto :fail
+  )
+  popd
+  echo   [ok] artifacts built
+) else (
+  echo   [ok] workspace artifacts present
+)
+
 rem --- launch --------------------------------------------------------------
 pushd "%REPO%"
 if /i "%MODE%"=="desktop" (
