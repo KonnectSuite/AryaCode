@@ -1,6 +1,6 @@
-DeepSeek Harness
-DeepSeek Harness
-Welcome to DeepSeek Harness
+AryaCode
+AryaCode
+Welcome to AryaCode
 Build potential. Explore intelligence.
 Sign in
 Add API Key

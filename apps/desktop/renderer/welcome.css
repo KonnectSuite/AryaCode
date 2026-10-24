@@ -93,10 +93,28 @@ body {
   grid-column: 1;
 }
 
+/* Mark and name sit side by side: the mark is the brand kit asset at its own
+   aspect ratio, the name is real text so it can use the brand font. */
+.brand-row {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.brand-name {
+  font-family: var(--dsw-font-family-brand);
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  color: var(--dsw-alias-label-primary);
+}
+
 .brand {
   display: block;
   flex: none;
-  width: 100%;
+  width: 40px;
   height: 40px;
   user-select: none;
   -webkit-user-drag: none;
