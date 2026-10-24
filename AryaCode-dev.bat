@@ -2,8 +2,8 @@
 rem ---------------------------------------------------------------------------
 rem  AryaCode dev launcher
 rem
-rem  Usage:  AryaCode-dev.bat            start the web GUI (fastest way to see it)
-rem          AryaCode-dev.bat desktop    start the Electron desktop app in dev
+rem  Usage:  AryaCode-dev.bat            start the Electron desktop app in dev
+rem          AryaCode-dev.bat web        start the web GUI in a browser instead
 rem          AryaCode-dev.bat check      verify node, pnpm and the checkout only
 rem
 rem  Override the checkout with:  set ARYACODE_REPO=D:\path\to\AryaCode
@@ -11,7 +11,7 @@ rem ---------------------------------------------------------------------------
 setlocal EnableExtensions EnableDelayedExpansion
 
 set "MODE=%~1"
-if "%MODE%"=="" set "MODE=web"
+if "%MODE%"=="" set "MODE=desktop"
 
 set "REPO=%ARYACODE_REPO%"
 if "%REPO%"=="" set "REPO=C:\Users\KNPhu\.arya\github\KonnectSuite\AryaCode"
@@ -74,6 +74,8 @@ echo.
 echo   [i] inherited DSH_HOME: "!INHERITED_HOME!"
 echo   [ok] this run is isolated to: "!DSH_HOME!"
 echo        profiles, plugins and sessions stay out of the installed instance
+echo   [i] Electron userData for dev is kept inside the checkout by
+echo        apps/desktop/scripts/dev.ts (override: DSH_DESKTOP_USER_DATA_DIR)
 
 rem --- dependencies --------------------------------------------------------
 if not exist "%REPO%\node_modules" (
