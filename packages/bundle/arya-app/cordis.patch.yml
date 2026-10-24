@@ -1,0 +1,12 @@
+# AryaCode product layer.
+#
+# Applied after the upstream surface bundle it depends on. Everything upstream
+# stays byte-identical; this file is the whole of AryaCode's product difference:
+# it mounts the AryaCode plugin market, which is the one plugin that ships with
+# every install.
+#
+# Rows here override earlier layers by id, so this insert is also the place a
+# later product change belongs - never an edit to packages/bundle/web-app.
+- insert:
+    - id: dsh-market
+      name: '@aryacode/dsh-arya-market'

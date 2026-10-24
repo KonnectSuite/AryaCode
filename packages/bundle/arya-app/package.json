@@ -1,0 +1,33 @@
+{
+    "name":  "@aryacode/dsh-arya-app",
+    "description":  "AryaCode product bundle: the upstream web surface plus the AryaCode plugin market",
+    "version":  "0.2.1-rc.3",
+    "private":  true,
+    "type":  "module",
+    "repository":  {
+                       "type":  "git",
+                       "url":  "git+https://github.com/KonnectSuite/AryaCode.git",
+                       "directory":  "packages/bundle/arya-app"
+                   },
+    "dsh":  {
+                "bundle":  {
+                               "patch":  "./cordis.patch.yml"
+                           }
+            },
+    "dependencies":  {
+                         "@aryacode/dsh-arya-market":  "1.70.1-arya.0.1",
+                         "@deepseek-ai/dsh-web-app":  "workspace:*"
+                     },
+    "main":  "lib/index.js",
+    "types":  "lib/types/index.d.ts",
+    "files":  [
+                  "lib/index.js",
+                  "cordis.patch.yml"
+              ],
+    "exports":  {
+                    ".":  {
+                              "types":  "./lib/types/index.d.ts",
+                              "default":  "./lib/index.js"
+                          }
+                }
+}
