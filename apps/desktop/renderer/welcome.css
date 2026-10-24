@@ -103,12 +103,13 @@ body {
   gap: 12px;
 }
 
-.brand-name {
-  font-family: var(--dsw-font-family-brand);
-  font-size: 30px;
-  font-weight: 600;
-  letter-spacing: -0.4px;
-  color: var(--dsw-alias-label-primary);
+.brand-wordmark {
+  display: block;
+  flex: none;
+  width: auto;
+  height: 34px;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .brand {

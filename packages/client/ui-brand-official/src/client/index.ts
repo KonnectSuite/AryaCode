@@ -9,13 +9,17 @@ import { OfficialBrandMark, OfficialBrandName } from './Brand.tsx'
 export const inject = ['slots']
 
 /**
- * Fill the brand slots as one declaration-aware registration set: the sidebar
- * mark, the sidebar name, and the conversation hero mark.
+ * Fill the brand mark slots with the AryaCode mark: the sidebar rail and the
+ * conversation hero.
  *
- * Upstream registers these only for the `official` build profile and leaves the
- * conversation hero on the shell's fish fallback. AryaCode is the product in
- * every build it produces, so the occupants are unconditional here and the hero
- * is claimed too - otherwise the shell draws a whale wherever a mark is missing.
+ * The name slot is deliberately left to the shell's fallback, which renders the
+ * product name from `brand.localBuild`. The upstream occupant draws DeepSeek's
+ * wordmark artwork and there is no AryaCode wordmark to replace it with, so
+ * claiming that slot would put someone else's brand on the product.
+ *
+ * Upstream registers nothing outside the `official` profile, which is why a
+ * non-official build fell back to the shell's whale. AryaCode is the product in
+ * every build it produces, so these occupants are unconditional.
  *
  * @param ctx - Client root context.
  */

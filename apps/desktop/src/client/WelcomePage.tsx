@@ -176,8 +176,8 @@ export function Welcome({ api }: { api: WelcomeApi }) {
     <div className="titlebar" aria-hidden="true" />
     <main className="welcome" aria-labelledby={heading}>
       <div className="brand-row">
-        <img className="brand" src="assets/arya-mark.svg" alt={m.welcomeBrand} width="40" height="40" />
-        <span className="brand-name">{m.welcomeBrand}</span>
+        <img className="brand" src="assets/arya-mark.svg" alt="" width="40" height="40" />
+        <img className="brand-wordmark" src="assets/arya-wordmark.svg" alt={m.welcomeBrand} height="34" />
       </div>
       <div id="tagline" className="tagline" hidden={page !== 'entry'}>
         <h1 id="welcome-heading"><span>{m.welcomeTaglineBefore}</span><em>{m.welcomeTaglineBrand}</em><span>{m.welcomeTaglineAfter}</span></h1>
