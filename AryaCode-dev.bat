@@ -83,6 +83,14 @@ echo   [ok] this run is isolated to: "!DSH_HOME!"
 echo        profiles, plugins and sessions stay out of the installed instance
 echo   [i] Electron userData for dev is kept inside the checkout by
 echo        apps/desktop/scripts/dev.ts (override: DSH_DESKTOP_USER_DATA_DIR)
+rem  %TEMP% is shared with every process on the machine, and a scanner watching
+rem  it can hold the file esbuild is trying to delete. The Web build then dies
+rem  with "remove ...: Access is denied" - reproducibly, even with the gates
+rem  serialised, and never once the temp root is private. This run gets its own.
+set "TMP=%LOCALAPPDATA%\AryaCode-dev\tmp"
+set "TEMP=%TMP%"
+if not exist "%TMP%" mkdir "%TMP%" >nul 2>&1
+echo   [ok] private build temp: "!TMP!"
 
 rem --- dependencies --------------------------------------------------------
 if not exist "%REPO%\node_modules" (
