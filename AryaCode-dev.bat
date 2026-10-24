@@ -83,13 +83,17 @@ echo   [ok] this run is isolated to: "!DSH_HOME!"
 echo        profiles, plugins and sessions stay out of the installed instance
 echo   [i] Electron userData for dev is kept inside the checkout by
 echo        apps/desktop/scripts/dev.ts (override: DSH_DESKTOP_USER_DATA_DIR)
-rem  %TEMP% is shared with every process on the machine, and a scanner watching
-rem  it can hold the file esbuild is trying to delete. The Web build then dies
-rem  with "remove ...: Access is denied" - reproducibly, even with the gates
-rem  serialised, and never once the temp root is private. This run gets its own.
-set "TMP=%LOCALAPPDATA%\AryaCode-dev\tmp"
+rem  %TEMP% is shared with every process on the machine, and esbuild names its
+rem  temp file after a hash of the content: two builds running at once - this
+rem  one and a watcher left behind by an earlier launch - pick the same path, and
+rem  the loser cannot delete a file the winner still holds. The build therefore
+rem  gets a temp root unique to this run, so no second build can ever collide.
+set "RUNID=%RANDOM%%RANDOM%"
+set "TMP=%LOCALAPPDATA%\AryaCode-dev\tmp\!RUNID!"
 set "TEMP=%TMP%"
 if not exist "%TMP%" mkdir "%TMP%" >nul 2>&1
+rem  Runs accumulate a directory each; clear the ones from previous days.
+forfiles /p "%LOCALAPPDATA%\AryaCode-dev\tmp" /d -1 /c "cmd /c if @isdir==TRUE rmdir /s /q @path" >nul 2>&1
 echo   [ok] private build temp: "!TMP!"
 
 rem --- dependencies --------------------------------------------------------

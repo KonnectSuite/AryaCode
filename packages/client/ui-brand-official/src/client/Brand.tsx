@@ -1,5 +1,12 @@
 import { BrandWordmark } from '@deepseek-ai/dsh-client-ui-primitives'
-import type { SidebarBrandMarkOwnerProps } from '@deepseek-ai/dsh-client-ui-sidebar/client'
+
+/** Presentation the brand slots hand to their occupant. */
+export interface BrandMarkProps {
+  /** Square edge length in logical pixels. */
+  readonly size?: number | undefined
+  /** Host class for layout or hiding the mark in a given surface. */
+  readonly className?: string | undefined
+}
 
 /**
  * Render the AryaCode mark with the presentation requested by its host surface.
@@ -12,7 +19,7 @@ import type { SidebarBrandMarkOwnerProps } from '@deepseek-ai/dsh-client-ui-side
  * @param props - Host-supplied mark presentation.
  * @returns the AryaCode mark.
  */
-export function OfficialBrandMark({ size }: SidebarBrandMarkOwnerProps) {
+export function OfficialBrandMark({ size = 24, className }: BrandMarkProps) {
   return (
     <svg
       width={size}
@@ -21,6 +28,7 @@ export function OfficialBrandMark({ size }: SidebarBrandMarkOwnerProps) {
       role="img"
       aria-label="AryaCode"
       focusable="false"
+      className={className}
     >
       <defs>
         <linearGradient id="arya-code-frame" x1="0" y1="1" x2="1" y2="0">
