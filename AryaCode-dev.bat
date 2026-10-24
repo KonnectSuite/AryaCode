@@ -13,6 +13,13 @@ setlocal EnableExtensions EnableDelayedExpansion
 set "MODE=%~1"
 if "%MODE%"=="" set "MODE=desktop"
 
+rem  If this window was started by an Electron host (an IDE shell, or a dev
+rem  terminal inside a packaged app), ELECTRON_RUN_AS_NODE is inherited and makes
+rem  electron.exe behave as plain Node: it then rejects --user-data-dir and
+rem  --remote-debugging-port with "bad option". A dev launch must be a real
+rem  Electron process, so the flag is cleared for this window.
+set "ELECTRON_RUN_AS_NODE="
+
 set "REPO=%ARYACODE_REPO%"
 if "%REPO%"=="" set "REPO=C:\Users\KNPhu\.arya\github\KonnectSuite\AryaCode"
 
