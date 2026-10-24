@@ -96,6 +96,12 @@ if not exist "%REPO%\node_modules" (
 )
 
 rem --- build artifacts ------------------------------------------------------
+rem  build:artifacts runs eight gates concurrently. esbuild names its temp file
+rem  after a hash of the content, so two gates transpiling the same module pick
+rem  the same path: one removes it while the other still holds it, and the build
+rem  dies with "remove ...: Access is denied" in the Web build. Serialising the
+rem  gates costs a few seconds and removes the race.
+set "DSH_GATE_CONCURRENCY=1"
 rem  pnpm install only links workspace packages; it does not compile them. The
 rem  desktop host imports built libraries (dsh-app-boot/lib/index.js and its
 rem  siblings), so a dev launch without artifacts fails at the first import.
