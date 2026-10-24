@@ -55,9 +55,25 @@ if not errorlevel 1 (
 
 if /i "%MODE%"=="check" (
   echo.
+  echo   [i] inherited DSH_HOME: "!DSH_HOME!"
+  echo   [ok] would isolate this run to: "%LOCALAPPDATA%\AryaCode-dev\home"
   echo   Check mode: prerequisites look fine. Nothing was installed or started.
   goto :done
 )
+
+rem --- isolation -----------------------------------------------------------
+rem  DSH keeps every profile, plugin and session under DSH_HOME, and this
+rem  machine has DSH_HOME set at user level. Inheriting it would point the dev
+rem  run at data the installed instance also uses, so this run gets its own
+rem  root and touches nothing outside it.
+set "INHERITED_HOME=!DSH_HOME!"
+set "DEVHOME=%LOCALAPPDATA%\AryaCode-dev\home"
+set "DSH_HOME=%DEVHOME%"
+if not exist "%DEVHOME%" mkdir "%DEVHOME%" >nul 2>&1
+echo.
+echo   [i] inherited DSH_HOME: "!INHERITED_HOME!"
+echo   [ok] this run is isolated to: "!DSH_HOME!"
+echo        profiles, plugins and sessions stay out of the installed instance
 
 rem --- dependencies --------------------------------------------------------
 if not exist "%REPO%\node_modules" (
