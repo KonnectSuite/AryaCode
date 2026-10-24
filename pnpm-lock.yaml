@@ -28,6 +28,9 @@ importers:
       '@aryacode/dsh-arya-app':
         specifier: workspace:*
         version: link:packages/bundle/arya-app
+      '@aryacode/dsh-arya-market':
+        specifier: ^1.70.1-arya.0.1
+        version: 1.70.1-arya.0.1(@deepseek-ai/cordis@4.0.5)(@deepseek-ai/dsh-settings@0.2.1-rc.3(c6164cc05bb96d8a9def3fda13dedebd))
       '@deepseek-ai/dsh-action-cards':
         specifier: workspace:*
         version: link:packages/experimental/action-cards

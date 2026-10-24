@@ -223,6 +223,7 @@
   },
   "devDependencies": {
     "@aryacode/dsh-arya-app": "workspace:*",
+    "@aryacode/dsh-arya-market": "^1.70.1-arya.0.1",
     "@deepseek-ai/dsh-hooks-claude-code": "workspace:*",
     "@deepseek-ai/dsh-hooks-codex": "workspace:*",
     "@deepseek-ai/dsh-tool-executor-native": "workspace:*",

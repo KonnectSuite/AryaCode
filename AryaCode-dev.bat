@@ -181,6 +181,18 @@ for /l %%i in (1,1,3) do (
   del /q "%TEMP%\esbuild-*" >nul 2>&1
   ping -n 3 127.0.0.1 >nul
 )
+rem  The Web build only regenerates apps/web/dist. When that alone keeps failing
+rem  but a usable dist is already on disk, the app still runs on it - a stale
+rem  page beats refusing to start over a temp-file handle. Every other failing
+rem  gate leaves the launch broken, so this is not a blanket ignore.
+if exist "%REPO%\apps\web\dist\index.html" (
+  echo.
+  echo   [warn] the Web build keeps failing, but a built frontend exists at
+  echo          apps\web\dist - starting on it. UI changes will not be visible
+  echo          until the build succeeds.
+  echo          Real fix: exclude this checkout from antivirus real-time scanning.
+  exit /b 0
+)
 exit /b 1
 
 :done
