@@ -173,23 +173,32 @@ exit /b 1
 :build
 rem  Three attempts. esbuild deletes a temp file after each transpile and
 rem  something on this machine intermittently holds it, failing the Web build
-rem  with "remove ...: Access is denied". Each retry clears the leftovers first.
+rem  with "remove ...: Access is denied".
+rem
+rem  That failure is worse than it looks: vite empties apps/web/dist when it
+rem  starts, so a failed run leaves NO frontend at all and the app cannot start
+rem  even on a stale build. The last good frontend is therefore cached and put
+rem  back after every failed attempt, and a good build refreshes the cache.
+set "WEBCACHE=%LOCALAPPDATA%\AryaCode-dev\web-dist"
 for /l %%i in (1,1,3) do (
   call pnpm run build:artifacts
-  if not errorlevel 1 exit /b 0
-  echo   [warn] build attempt %%i of 3 failed; clearing temp and retrying.
+  if not errorlevel 1 (
+    if exist "%REPO%\apps\web\dist\index.html" (
+      if exist "%WEBCACHE%" rmdir /s /q "%WEBCACHE%" >nul 2>&1
+      xcopy "%REPO%\apps\web\dist" "%WEBCACHE%" /E /I /Y /Q >nul 2>&1
+    )
+    exit /b 0
+  )
+  echo   [warn] build attempt %%i of 3 failed; restoring the last good frontend.
   del /q "%TEMP%\esbuild-*" >nul 2>&1
+  if exist "%WEBCACHE%\index.html" xcopy "%WEBCACHE%" "%REPO%\apps\web\dist" /E /I /Y /Q >nul 2>&1
   ping -n 3 127.0.0.1 >nul
 )
-rem  The Web build only regenerates apps/web/dist. When that alone keeps failing
-rem  but a usable dist is already on disk, the app still runs on it - a stale
-rem  page beats refusing to start over a temp-file handle. Every other failing
-rem  gate leaves the launch broken, so this is not a blanket ignore.
 if exist "%REPO%\apps\web\dist\index.html" (
   echo.
-  echo   [warn] the Web build keeps failing, but a built frontend exists at
-  echo          apps\web\dist - starting on it. UI changes will not be visible
-  echo          until the build succeeds.
+  echo   [warn] the Web build keeps failing, so the app starts on the last good
+  echo          frontend from %WEBCACHE%
+  echo          UI changes will not show until the build succeeds.
   echo          Real fix: exclude this checkout from antivirus real-time scanning.
   exit /b 0
 )
