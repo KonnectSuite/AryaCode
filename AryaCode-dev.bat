@@ -50,7 +50,7 @@ if not errorlevel 1 (
   echo   [ok] branch !BRANCH!
   del "%TEMP%\aryacode-branch.txt" >nul 2>&1
 ) else (
-  echo   [!] not a git checkout - continuing anyway
+  echo   [warn] not a git checkout - continuing anyway
 )
 
 if /i "%MODE%"=="check" (
@@ -120,10 +120,22 @@ if not exist "%REPO%\packages\boot\app-boot\lib\index.js" (
 rem --- launch --------------------------------------------------------------
 pushd "%REPO%"
 if /i "%MODE%"=="desktop" (
+  rem  esbuild leaves temp files behind on every build, and a scanner or an
+  rem  earlier run can still hold one. A locked temp file fails the Web build
+  rem  with "Access is denied", which reads like a code error but is transient.
+  del /q "%TEMP%\esbuild-*" >nul 2>&1
   echo.
   echo   Starting the Electron desktop app in dev. Close the window to stop.
   echo.
   call pnpm run dev:desktop
+  if errorlevel 1 (
+    echo.
+    echo   [warn] first attempt failed. Clearing temp again and retrying once -
+    echo       the usual cause is a transient esbuild temp-file lock.
+    del /q "%TEMP%\esbuild-*" >nul 2>&1
+    ping -n 3 127.0.0.1 >nul
+    call pnpm run dev:desktop
+  )
 ) else if /i "%MODE%"=="web" (
   echo.
   echo   Starting the web GUI. Watch for the local URL it prints, then open it.
@@ -137,7 +149,11 @@ if /i "%MODE%"=="desktop" (
 )
 set "RC=%ERRORLEVEL%"
 popd
-if not "%RC%"=="0" echo. & echo   [X] exited with code %RC%
+if not "%RC%"=="0" (
+  echo.
+  echo   [X] exited with code %RC%
+  goto :fail
+)
 goto :done
 
 :fail
