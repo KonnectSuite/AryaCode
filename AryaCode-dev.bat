@@ -117,46 +117,30 @@ rem  the same path: one removes it while the other still holds it, and the build
 rem  dies with "remove ...: Access is denied" in the Web build. Serialising the
 rem  gates costs a few seconds and removes the race.
 set "DSH_GATE_CONCURRENCY=1"
-rem  pnpm install only links workspace packages; it does not compile them. The
-rem  desktop host imports built libraries (dsh-app-boot/lib/index.js and its
-rem  siblings), so a dev launch without artifacts fails at the first import.
-rem  app-boot's lib is the canary: if it is absent nothing else is built either.
-if not exist "%REPO%\packages\boot\app-boot\lib\index.js" (
+rem  pnpm install only links workspace packages; it does not compile them, and
+rem  the dev script rebuilds on every launch. That rebuild is where the launch
+rem  was dying, so it runs here first with retries, and the app then starts with
+rem  the build skipped.
+pushd "%REPO%"
+call :build
+set "BUILD_RC=%ERRORLEVEL%"
+popd
+if not "%BUILD_RC%"=="0" (
   echo.
-  echo   [..] workspace artifacts are missing. Building them - this takes several minutes.
-  pushd "%REPO%"
-  call pnpm run build:artifacts
-  if errorlevel 1 (
-    popd
-    echo.
-    echo   [X] build:artifacts failed. Scroll up for the first error.
-    goto :fail
-  )
-  popd
-  echo   [ok] artifacts built
-) else (
-  echo   [ok] workspace artifacts present
+  echo   [X] build:artifacts failed three times. The errors are above.
+  goto :fail
 )
+echo   [ok] artifacts built
 
 rem --- launch --------------------------------------------------------------
 pushd "%REPO%"
 if /i "%MODE%"=="desktop" (
-  rem  esbuild leaves temp files behind on every build, and a scanner or an
-  rem  earlier run can still hold one. A locked temp file fails the Web build
-  rem  with "Access is denied", which reads like a code error but is transient.
-  del /q "%TEMP%\esbuild-*" >nul 2>&1
   echo.
   echo   Starting the Electron desktop app in dev. Close the window to stop.
   echo.
-  call pnpm run dev:desktop
-  if errorlevel 1 (
-    echo.
-    echo   [warn] first attempt failed. Clearing temp again and retrying once -
-    echo       the usual cause is a transient esbuild temp-file lock.
-    del /q "%TEMP%\esbuild-*" >nul 2>&1
-    ping -n 3 127.0.0.1 >nul
-    call pnpm run dev:desktop
-  )
+  rem  start:desktop is dev.ts --skip-build: the artifacts are already built
+  rem  above, so nothing transpiles during startup.
+  call pnpm run start:desktop
 ) else if /i "%MODE%"=="web" (
   echo.
   echo   Starting the web GUI. Watch for the local URL it prints, then open it.
@@ -180,6 +164,19 @@ goto :done
 :fail
 echo.
 pause
+exit /b 1
+
+:build
+rem  Three attempts. esbuild deletes a temp file after each transpile and
+rem  something on this machine intermittently holds it, failing the Web build
+rem  with "remove ...: Access is denied". Each retry clears the leftovers first.
+for /l %%i in (1,1,3) do (
+  call pnpm run build:artifacts
+  if not errorlevel 1 exit /b 0
+  echo   [warn] build attempt %%i of 3 failed; clearing temp and retrying.
+  del /q "%TEMP%\esbuild-*" >nul 2>&1
+  ping -n 3 127.0.0.1 >nul
+)
 exit /b 1
 
 :done
