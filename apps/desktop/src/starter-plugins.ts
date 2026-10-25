@@ -44,6 +44,13 @@ export interface StarterPlugin {
 /** Plugins shipped pre-installed in every AryaCode profile. */
 export const STARTER_PLUGINS: readonly StarterPlugin[] = [
   {
+    name: '@aryacode/dsh-arya-market',
+    range: '^1.70.1-arya.0.1',
+    version: '1.70.1-arya.0.1',
+    tarball: '',
+    integrity: '',
+  },
+  {
     name: 'dsh-better-sidebar',
     range: '^0.28.0',
     version: '0.28.0',

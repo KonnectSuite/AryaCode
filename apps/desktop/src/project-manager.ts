@@ -38,7 +38,7 @@ const WEB_PROFILE = PROFILE_TEMPLATES.web as ProfileTemplate
  * layer that mounts the plugin market. Order matters - layers apply in sequence
  * and the later one wins by row id.
  */
-const ARYA_PROFILE_BUNDLES = [...WEB_PROFILE.bundles, '@aryacode/dsh-arya-app']
+const ARYA_PROFILE_BUNDLES = [...WEB_PROFILE.bundles]
 const WORKSPACE_SETTINGS = 'nodeLinker: hoisted\nautoInstallPeers: false\n'
 function writeJson(path: string, value: unknown): void {
   writeFileSync(path, `${JSON.stringify(value, undefined, 2)}\n`, { mode: 0o600 })
@@ -112,11 +112,16 @@ export class DesktopProjectManager {
     const logPath = join(this.paths.profile, 'seed.log')
     try {
       const seedDir = fileURLToPath(new URL('../seed/', import.meta.url))
+      const runtime = join(process.resourcesPath, 'runtime', 'primary-runtime', 'dependencies')
+      const pnpm = existsSync(join(runtime, 'pnpm', 'bin', 'pnpm.cjs'))
+        ? join(runtime, 'pnpm', 'bin', 'pnpm.cjs')
+        : 'pnpm'
       const report = await seedStarterPlugins({
         profile: 'dsh',
         dir: this.paths.profile,
         seedDir,
-        installAnchor: this.runtime.dsh,
+        node: process.execPath,
+        pnpm,
       })
       appendFileSync(logPath, 'seed: installed=' + report.installed.join(',')
         + ' present=' + report.present.join(',')

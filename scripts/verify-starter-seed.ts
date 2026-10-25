@@ -17,7 +17,8 @@ if (webTemplate === undefined) throw new Error('verify-starter-seed: the web pro
 initProfile(dir, webTemplate.bundles)
 
 const seedDir = join(import.meta.dirname, '..', 'apps', 'desktop', 'seed')
-const target = { profile: 'scratch', dir, seedDir, installAnchor: dir }
+const target = { profile: 'scratch', dir, seedDir, node: process.execPath,
+  pnpm: 'pnpm' }
 
 const first = await seedStarterPlugins(target)
 console.log('FIRST :', JSON.stringify(first))

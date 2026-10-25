@@ -1,53 +1,34 @@
 /**
  * Install the plugins every AryaCode profile starts with.
  *
- * The work is done by the plugin manager's own command runner, so a seeded
- * plugin is installed exactly the way the market installs one: same pnpm call,
- * same compatibility checks, same `dsh.profile.bundles` reconciliation. There is
- * one install path in the product, not two that can drift.
+ * Deliberately self-sufficient: it runs the packaged runtime's own pnpm against
+ * the profile and edits the profile manifest itself. An earlier version called
+ * the plugin manager, which loads unbundled from the application archive where
+ * its dependencies are not resolvable, so seeding failed inside the packaged
+ * application while working in a dev checkout.
  *
- * Each entry installs from the tarball shipped with the app, so a fresh install
- * needs no network and survives the package's publisher disappearing. The
- * dependency spec is then rewritten to the entry's semver range: installing a
- * `file:` spec is how the bytes get in, but recording one would pin the profile
- * to the installer forever and the market could never update it again.
+ * Two rules keep the result updatable, and tests enforce them:
  *
- * Idempotent: a plugin that is already present at any version is left exactly
- * as it is. That keeps a deliberate uninstall or downgrade intact instead of
- * resurrecting it on the next boot.
+ * 1. Entries that ship a tarball install from those bytes, so a first run needs
+ *    no network and survives the package's publisher disappearing.
+ * 2. The dependency is recorded as a semver range afterwards. Recording the
+ *    `file:` spec would pin the profile to the installer's bytes forever and the
+ *    market could never update it - the treadmill this project exists to escape.
+ *
+ * Idempotent: an existing install at any version is left alone, so a deliberate
+ * uninstall or downgrade survives the next boot.
  *
  * @module seed-starter-plugins
  */
 
+import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
+import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import { createRequire } from 'node:module'
 import { STARTER_PLUGINS, type StarterPlugin } from './starter-plugins.ts'
 
-/**
- * The plugin manager is loaded through the built package rather than imported
- * as source: this app must not compile that package as part of its own program,
- * and the runtime shape it needs is one call.
- */
-interface PluginCommands {
-  runPluginCommand: (
-    context: { profile: string; dir: string; installAnchor: string; cwd: string },
-    args: readonly string[],
-    options: unknown,
-  ) => Promise<{ exitCode: number }>
-}
-
-const requireBuilt = createRequire(import.meta.url)
-
-/** Package-operation options accepted by the plugin manager's command runner. */
-export interface SeedOptions {
-  readonly execution: 'service'
-  readonly outputBytes: number
-  readonly onOutput: (text: string, stream: 'stdout' | 'stderr') => void
-}
-
-/** Where a profile lives and which plugin binaries ship with the app. */
+/** Where a profile lives, plus the runtimes used to install into it. */
 export interface SeedTarget {
   /** Profile name, as the plugin manager addresses it. */
   readonly profile: string
@@ -55,8 +36,10 @@ export interface SeedTarget {
   readonly dir: string
   /** Directory the seeded tarballs were copied to. */
   readonly seedDir: string
-  /** Installation anchor the plugin manager resolves packages against. */
-  readonly installAnchor: string
+  /** Node executable of the packaged runtime. */
+  readonly node: string
+  /** pnpm entry script of the packaged runtime. */
+  readonly pnpm: string
 }
 
 /** What a seed run did, for logging and tests. */
@@ -69,7 +52,7 @@ export interface SeedReport {
   readonly failed: readonly { readonly name: string; readonly reason: string }[]
 }
 
-/** Read a plugin's name and version from a profile's node_modules, if present. */
+/** Read a plugin's version from a profile's node_modules, if present. */
 function installedVersion(dir: string, name: string): string | undefined {
   const manifest = join(dir, 'node_modules', name, 'package.json')
   if (!existsSync(manifest)) return undefined
@@ -100,35 +83,43 @@ export function verifyStarterTarball(seedDir: string, plugin: StarterPlugin): st
   return path
 }
 
+/** Shape of the fields this module edits in a profile manifest. */
+interface ProfileManifest {
+  dependencies?: Record<string, string>
+  dsh?: { profile?: { bundles?: string[] } }
+}
+
 /**
- * Record the semver range in place of the `file:` spec the install wrote, so the
- * market can update the plugin later. Other dependencies are untouched.
+ * Record the entry the way a market install leaves it: the semver range in the
+ * dependency, and the package named in the profile's bundle stack.
  * @param dir - Profile directory.
- * @param name - Dependency to rewrite.
+ * @param name - Package name.
  * @param range - Semver range to record.
  */
-async function recordRange(dir: string, name: string, range: string): Promise<void> {
-  const manifestPath = join(dir, 'package.json')
-  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8')) as {
-    dependencies?: Record<string, string>
-  }
-  if (manifest.dependencies === undefined || manifest.dependencies[name] === undefined) return
+async function recordInstall(dir: string, name: string, range: string): Promise<void> {
+  const path = join(dir, 'package.json')
+  const manifest = JSON.parse(readFileSync(path, 'utf8')) as ProfileManifest
+  manifest.dependencies ??= {}
   manifest.dependencies[name] = range
-  const { writeFile } = await import('node:fs/promises')
-  await writeFile(manifestPath, `${JSON.stringify(manifest, undefined, 2)}\n`)
+  manifest.dsh ??= {}
+  manifest.dsh.profile ??= {}
+  const bundles = manifest.dsh.profile.bundles ?? []
+  if (!bundles.includes(name)) bundles.push(name)
+  manifest.dsh.profile.bundles = bundles
+  await writeFile(path, `${JSON.stringify(manifest, undefined, 2)}\n`)
 }
 
 /**
  * Install every plugin the shipped set names that the profile does not already
  * have.
  *
- * @param target - Profile and seed locations.
- * @param options - Overrides for the underlying package operation.
+ * @param target - Profile, seed and runtime locations.
+ * @param onOutput - Receives package-manager output for diagnostics.
  * @returns What was installed, what was already there, and what failed.
  */
 export async function seedStarterPlugins(
   target: SeedTarget,
-  options: SeedOptions = { execution: 'service', outputBytes: 0, onOutput: () => {} },
+  onOutput: (text: string) => void = () => {},
 ): Promise<SeedReport> {
   const installed: string[] = []
   const present: string[] = []
@@ -140,18 +131,22 @@ export async function seedStarterPlugins(
       continue
     }
     try {
-      const tarball = verifyStarterTarball(target.seedDir, plugin)
-      const commands = requireBuilt('@deepseek-ai/dsh-plugin-manager/operations') as PluginCommands
-      const result = await commands.runPluginCommand(
-        { profile: target.profile, dir: target.dir, installAnchor: target.installAnchor, cwd: target.dir },
-        ['add', `file:${tarball}`],
-        options,
-      )
-      if (result.exitCode !== 0) {
-        failed.push({ name: plugin.name, reason: `install exited ${String(result.exitCode)}` })
+      const spec = plugin.tarball === ''
+        ? `${plugin.name}@${plugin.version}`
+        : `file:${verifyStarterTarball(target.seedDir, plugin)}`
+      const run = spawnSync(target.node, [target.pnpm, 'add', spec, '--prefer-offline'], {
+        cwd: target.dir,
+        encoding: 'utf8',
+        // The packaged node here is the Electron binary; without this it opens a window.
+        env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+        windowsHide: true,
+      })
+      onOutput(`${run.stdout ?? ''}${run.stderr ?? ''}`)
+      if (run.status !== 0) {
+        failed.push({ name: plugin.name, reason: `pnpm exited ${String(run.status)}` })
         continue
       }
-      await recordRange(target.dir, plugin.name, plugin.range)
+      await recordInstall(target.dir, plugin.name, plugin.range)
       installed.push(plugin.name)
     } catch (error) {
       failed.push({ name: plugin.name, reason: error instanceof Error ? error.message : String(error) })
