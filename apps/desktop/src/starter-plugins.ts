@@ -6,21 +6,23 @@
  * question is answered. Adding a plugin to the shipped set is a one-line change
  * here.
  *
- * The seeding step that consumes this list installs each entry into the
- * profile and appends it to `dsh.profile.bundles`. Two rules make that
- * survivable long-term, and both are enforced by tests:
+ * Each entry names an exact, validated build and the tarball that carries it.
+ * Shipping the tarball is deliberate: the package is third-party, and its
+ * publisher could delete the repository or unpublish the version at any time.
+ * With the bytes in our own artifact, an install keeps working in that case,
+ * and updates keep working while the registry is alive. `integrity` is verified
+ * before install so a substituted or corrupted tarball is refused rather than
+ * executed.
  *
- * 1. `range` is a semver range, never a `file:` or `workspace:` spec. A file
- *    spec would pin the profile to bytes inside the installer and make the
- *    market unable to ever update the plugin again - exactly the rebuild-the-
- *    installer treadmill this project exists to escape.
- * 2. Entries are npm packages, not paths. The seed installs them the same way
- *    the plugin market does, so a seeded plugin and a hand-installed one are
- *    indistinguishable afterwards.
+ * Two rules make the seeded plugin indistinguishable from one installed through
+ * the market, and both are enforced by tests:
  *
- * Offline installation is deliberately not modelled here: it ships the same
- * packages from a local cache instead of npm, and is a property of the release
- * artifact rather than of this list.
+ * 1. `range` is a semver range, never a `file:` or `workspace:` spec. The seed
+ *    installs from the tarball, then records the range, so the market can still
+ *    update the plugin afterwards. Recording the file spec would pin the
+ *    profile to the installer's bytes forever - the rebuild-the-installer
+ *    treadmill this project exists to escape.
+ * 2. Entries are npm package names, not paths, for the same reason.
  *
  * @module starter-plugins
  */
@@ -31,9 +33,21 @@ export interface StarterPlugin {
   readonly name: string
   /** Semver range recorded in the profile, so updates stay possible. */
   readonly range: string
+  /** Exact version the shipped tarball contains. */
+  readonly version: string
+  /** Tarball file name under the seed directory. */
+  readonly tarball: string
+  /** Subresource-integrity string of that tarball, verified before install. */
+  readonly integrity: string
 }
 
 /** Plugins shipped pre-installed in every AryaCode profile. */
 export const STARTER_PLUGINS: readonly StarterPlugin[] = [
-  { name: 'dsh-better-sidebar', range: '^0.28.0' },
+  {
+    name: 'dsh-better-sidebar',
+    range: '^0.28.0',
+    version: '0.28.0',
+    tarball: 'dsh-better-sidebar-0.28.0.tgz',
+    integrity: 'sha512-x7+/YmH/HrSlXWOBZkhL7qQqcDgZEnDcWrhR5GlizzUZjz+w84FbQ6jo8trJC9tyaQxMaNvXVnXwDxn4I330Ew==',
+  },
 ]
