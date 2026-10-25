@@ -145,6 +145,8 @@ const update = unsigned && !updateOriginNamed
     },
     files: [
       'lib/main.js',
+    // The starter plugin ships as bytes so a first run needs no network.
+    'seed/**/*',
       'lib/welcome/**/*',
       'lib/preload-app.cjs',
       'lib/preload-mandatory.cjs',

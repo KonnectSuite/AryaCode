@@ -1,4 +1,9 @@
 import type { ProductEventMap, ProductEvent } from '@deepseek-ai/dsh-client-product-analytics/types'
+
+// Electron keeps its own caches and local storage under AryaCode's home,
+// not %APPDATA%: the default path collided with whatever else claimed it and
+// left the app unable to create its cache at all.
+app.setPath('userData', join(resolveAryaCodeHome(), 'userData'))
 import { WINDOWS_TITLEBAR_HEIGHT } from './windows-layout.ts'
 /** Electron shell: desktop project ownership, custom protocol, windows, and lifecycle. */
 
@@ -22,7 +27,7 @@ import {
   type IpcMainInvokeEvent,
   type MenuItemConstructorOptions,
 } from 'electron'
-import { resolveDesktopPaths } from './paths.ts'
+import { resolveAryaCodeHome, resolveDesktopPaths } from './paths.ts'
 import { DesktopProjectManager } from './project-manager.ts'
 import { DesktopHostFatalError, DesktopHostProcess, DesktopHostUncleanExitError } from './host-process.ts'
 import { DesktopPlatformView, PLATFORM_IPC, platformBounds } from './platform-view.ts'
