@@ -23,6 +23,7 @@ import type { DesktopPaths } from './paths.ts'
 import type { DesktopRelease } from './release.ts'
 import { readDesktopRuntime } from './runtime-tree.ts'
 import { fileURLToPath } from 'node:url'
+import { appendFileSync } from 'node:fs'
 import { initProfile, removeLinkProjections, sanitizeProfile } from '@deepseek-ai/dsh-app-boot'
 import { seedStarterPlugins } from './seed-starter-plugins.ts'
 import { PROFILE_TEMPLATES, type ProfileTemplate } from '@deepseek-ai/dsh-official-bundles'
@@ -108,6 +109,7 @@ export class DesktopProjectManager {
    * The market is the fallback, and the user can install the plugin by hand.
    */
   private async applyStarterPlugins(): Promise<void> {
+    const logPath = join(this.paths.profile, 'seed.log')
     try {
       const seedDir = fileURLToPath(new URL('../seed/', import.meta.url))
       const report = await seedStarterPlugins({
@@ -116,11 +118,16 @@ export class DesktopProjectManager {
         seedDir,
         installAnchor: this.runtime.dsh,
       })
+      appendFileSync(logPath, 'seed: installed=' + report.installed.join(',')
+        + ' present=' + report.present.join(',')
+        + ' failed=' + report.failed.map(f => f.name + ':' + f.reason).join(',') + '\n')
       for (const failure of report.failed) {
-        console.warn(`arya: could not seed ${failure.name}: ${failure.reason}`)
+        console.warn('arya: could not seed ' + failure.name + ': ' + failure.reason)
       }
     } catch (error) {
-      console.warn(`arya: starter plugins were not seeded: ${error instanceof Error ? error.message : String(error)}`)
+      const reason = error instanceof Error ? error.message : String(error)
+      appendFileSync(logPath, 'seed: error=' + reason + '\n')
+      console.warn('arya: starter plugins were not seeded: ' + reason)
     }
   }
 
