@@ -997,15 +997,16 @@ async function main(): Promise<void> {
     { label: currentDesktopLocale().messages.checkUpdatesMenu, click: () => { void openUpdatePrompt(true) } },
     ...process.platform === 'darwin' || process.platform === 'win32'
       ? [{ label: currentDesktopLocale().messages.cliCommandMenu, click: () => { void commandManager.show() } }] : [],
-    ...development ? [
-      { type: 'separator' as const },
-      { label: currentDesktopLocale().messages.reloadPageMenu, role: 'reload' as const },
-      { label: currentDesktopLocale().messages.restartAppHostMenu, click: () => {
-        if (quitting) return
-        app.relaunch()
-        quitWithoutConfirmation()
-      } },
-    ] : [],
+    { type: 'separator' },
+    // Restarting the app and its host is a user action, not only a developer one:
+    // it is the only way to pick up a host change without hunting for the tray.
+    { label: currentDesktopLocale().messages.restartAppHostMenu, click: () => {
+      if (quitting) return
+      app.relaunch()
+      quitWithoutConfirmation()
+    } },
+    // Reloading a packaged UI is a developer affordance, so it stays behind the flag.
+    ...development ? [{ label: currentDesktopLocale().messages.reloadPageMenu, role: 'reload' as const }] : [],
     { type: 'separator' },
     ...hideCommands,
     { role: 'quit', ...(darwin ? { label: currentDesktopLocale().messages.quitApplication }
