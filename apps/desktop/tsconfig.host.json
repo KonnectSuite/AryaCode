@@ -9,9 +9,6 @@
   ],
   "references": [
     {
-      "path": "../../packages/boot/plugin-manager"
-    },
-    {
       "path": "../../packages/boot/app-boot"
     },
     {

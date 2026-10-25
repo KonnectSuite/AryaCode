@@ -12,7 +12,9 @@ import { seedStarterPlugins } from '../apps/desktop/src/seed-starter-plugins.ts'
 
 const root = mkdtempSync(join(tmpdir(), 'arya-seed-'))
 const dir = join(root, 'profiles', 'scratch')
-initProfile(dir, PROFILE_TEMPLATES.web.bundles)
+const webTemplate = PROFILE_TEMPLATES.web
+if (webTemplate === undefined) throw new Error('verify-starter-seed: the web profile template is missing')
+initProfile(dir, webTemplate.bundles)
 
 const seedDir = join(import.meta.dirname, '..', 'apps', 'desktop', 'seed')
 const target = { profile: 'scratch', dir, seedDir, installAnchor: dir }

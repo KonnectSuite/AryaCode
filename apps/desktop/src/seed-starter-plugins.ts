@@ -22,8 +22,30 @@
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { runPluginCommand, type PackageOperationOptions } from '@deepseek-ai/dsh-plugin-manager/operations'
+import { createRequire } from 'node:module'
 import { STARTER_PLUGINS, type StarterPlugin } from './starter-plugins.ts'
+
+/**
+ * The plugin manager is loaded through the built package rather than imported
+ * as source: this app must not compile that package as part of its own program,
+ * and the runtime shape it needs is one call.
+ */
+interface PluginCommands {
+  runPluginCommand: (
+    context: { profile: string; dir: string; installAnchor: string; cwd: string },
+    args: readonly string[],
+    options: unknown,
+  ) => Promise<{ exitCode: number }>
+}
+
+const requireBuilt = createRequire(import.meta.url)
+
+/** Package-operation options accepted by the plugin manager's command runner. */
+export interface SeedOptions {
+  readonly execution: 'service'
+  readonly outputBytes: number
+  readonly onOutput: (text: string, stream: 'stdout' | 'stderr') => void
+}
 
 /** Where a profile lives and which plugin binaries ship with the app. */
 export interface SeedTarget {
@@ -106,7 +128,7 @@ async function recordRange(dir: string, name: string, range: string): Promise<vo
  */
 export async function seedStarterPlugins(
   target: SeedTarget,
-  options: PackageOperationOptions = { execution: 'service', outputBytes: 0, onOutput: () => {} },
+  options: SeedOptions = { execution: 'service', outputBytes: 0, onOutput: () => {} },
 ): Promise<SeedReport> {
   const installed: string[] = []
   const present: string[] = []
@@ -119,7 +141,8 @@ export async function seedStarterPlugins(
     }
     try {
       const tarball = verifyStarterTarball(target.seedDir, plugin)
-      const result = await runPluginCommand(
+      const commands = requireBuilt('@deepseek-ai/dsh-plugin-manager/operations') as PluginCommands
+      const result = await commands.runPluginCommand(
         { profile: target.profile, dir: target.dir, installAnchor: target.installAnchor, cwd: target.dir },
         ['add', `file:${tarball}`],
         options,
