@@ -121,6 +121,9 @@ const update = unsigned && !updateOriginNamed
       ...packaged === undefined ? {} : { dshBuildCommit: packaged.commit, dshBuildDirty: packaged.dirty },
     },
     productName: 'AryaCode',
+    // Distinct from every other harness on the machine: two products sharing one
+    // updater cache directory would overwrite each other's download state.
+    updaterCacheDirName: 'aryacode-updater',
     // The default copyright uses author.name; this line names the product instead.
     copyright: `Copyright © ${new Date().getFullYear()} \${productName}`,
     // Unsigned builds carry their own suffix so a shared file can never pass for a release artifact.
