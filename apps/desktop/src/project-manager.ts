@@ -108,8 +108,8 @@ export class DesktopProjectManager {
    * The market is the fallback, and the user can install the plugin by hand.
    */
   private async applyStarterPlugins(): Promise<void> {
-    const seedDir = fileURLToPath(new URL('../seed/', import.meta.url))
     try {
+      const seedDir = fileURLToPath(new URL('../seed/', import.meta.url))
       const report = await seedStarterPlugins({
         profile: 'dsh',
         dir: this.paths.profile,
