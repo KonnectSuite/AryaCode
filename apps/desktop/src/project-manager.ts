@@ -22,7 +22,9 @@ import {
 import type { DesktopPaths } from './paths.ts'
 import type { DesktopRelease } from './release.ts'
 import { readDesktopRuntime } from './runtime-tree.ts'
+import { fileURLToPath } from 'node:url'
 import { initProfile, removeLinkProjections, sanitizeProfile } from '@deepseek-ai/dsh-app-boot'
+import { seedStarterPlugins } from './seed-starter-plugins.ts'
 import { PROFILE_TEMPLATES, type ProfileTemplate } from '@deepseek-ai/dsh-official-bundles'
 
 const PROJECT_NAME = '@deepseek-ai/dsh-desktop-runtime'
@@ -94,6 +96,32 @@ export class DesktopProjectManager {
       createPluginProfile(this.paths.profile)
       removeLinkProjections(this.paths.profile)
     })
+    await this.applyStarterPlugins()
+  }
+
+  /**
+   * Install the plugins every profile starts with, outside the profile lock
+   * because a package install can take minutes.
+   *
+   * Failures are reported and swallowed on purpose: a missing tarball, an
+   * offline machine or a bad peer must never stop the application from starting.
+   * The market is the fallback, and the user can install the plugin by hand.
+   */
+  private async applyStarterPlugins(): Promise<void> {
+    const seedDir = fileURLToPath(new URL('../seed/', import.meta.url))
+    try {
+      const report = await seedStarterPlugins({
+        profile: 'dsh',
+        dir: this.paths.profile,
+        seedDir,
+        installAnchor: this.runtime.dsh,
+      })
+      for (const failure of report.failed) {
+        console.warn(`arya: could not seed ${failure.name}: ${failure.reason}`)
+      }
+    } catch (error) {
+      console.warn(`arya: starter plugins were not seeded: ${error instanceof Error ? error.message : String(error)}`)
+    }
   }
 
   private async withLock<T>(operation: () => T | Promise<T>): Promise<T> {
