@@ -8,9 +8,12 @@
  *
  * Each entry names an exact, validated build and the tarball that carries it.
  * Shipping the tarball is deliberate: a third-party publisher could delete the
- * repository or unpublish the version at any time, and a first run must not
- * need the network at all. With the bytes in our own artifact, an install keeps
- * working in both cases, and updates keep working while the registry is alive.
+ * repository or unpublish the version at any time. With the bytes in our own
+ * artifact the install no longer depends on that promise holding, and updates
+ * keep working afterwards while the registry is alive. The tarball's own
+ * dependencies are ordinary registry dependencies, so a first run still
+ * resolves them from the pnpm store or, when one is missing there, the network;
+ * only the plugin itself is guaranteed to be present.
  * `integrity` is verified before install so a substituted or corrupted tarball
  * is refused rather than executed.
  *
@@ -49,6 +52,13 @@ export const STARTER_PLUGINS: readonly StarterPlugin[] = [
     version: '1.70.1-arya.0.2',
     tarball: 'aryacode-dsh-arya-market-1.70.1-arya.0.2.tgz',
     integrity: 'sha512-nUxE/FNPUFFW56j1WT0app8Zx81bHIL9NbaXByrT+y0kGWDFFBCqz9ATtgo3VZsLiuO3LW/4367DYtu/nOHBRA==',
+  },
+  {
+    name: '@aryacode/dsh-engineering',
+    range: '^0.20.2',
+    version: '0.20.2',
+    tarball: 'aryacode-dsh-engineering-0.20.2.tgz',
+    integrity: 'sha512-WIgVVxmHJzGou0aT1x8KhhO0pTCSFOFsSXstcv7SIK0eTCIxWOezZNKWSYSm3U6Yk0a68R4tnY2ge6dFzFrY5A==',
   },
   {
     name: 'dsh-better-sidebar',
