@@ -13,7 +13,8 @@ import {
   writeFileSync,
   writeSync,
 } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import {
   DESKTOP_HOST_PACKAGE,
   desktopCorePackageOverrides,
@@ -22,10 +23,9 @@ import {
 import type { DesktopPaths } from './paths.ts'
 import type { DesktopRelease } from './release.ts'
 import { readDesktopRuntime } from './runtime-tree.ts'
-import { fileURLToPath } from 'node:url'
 import { appendFileSync } from 'node:fs'
 import { initProfile, removeLinkProjections, sanitizeProfile } from '@deepseek-ai/dsh-app-boot'
-import { seedStarterPlugins } from './seed-starter-plugins.ts'
+import { seedDirectory, seedStarterPlugins } from './seed-starter-plugins.ts'
 import { PROFILE_TEMPLATES, type ProfileTemplate } from '@deepseek-ai/dsh-official-bundles'
 
 const PROJECT_NAME = '@deepseek-ai/dsh-desktop-runtime'
@@ -111,11 +111,13 @@ export class DesktopProjectManager {
   private async applyStarterPlugins(): Promise<void> {
     const logPath = join(this.paths.profile, 'seed.log')
     try {
-      const seedDir = fileURLToPath(new URL('../seed/', import.meta.url))
+      const seedDir = seedDirectory(import.meta.url)
       const runtime = join(process.resourcesPath, 'runtime', 'primary-runtime', 'dependencies')
-      const pnpm = existsSync(join(runtime, 'pnpm', 'bin', 'pnpm.cjs'))
-        ? join(runtime, 'pnpm', 'bin', 'pnpm.cjs')
-        : 'pnpm'
+      const bundledPnpm = join(runtime, 'pnpm', 'bin', 'pnpm.cjs')
+      // A development run has no packaged runtime. Fall back to the checkout's own pnpm entry
+      // rather than the PATH shim, which a bare node process cannot execute on Windows.
+      const developmentPnpm = join(dirname(fileURLToPath(import.meta.url)), '..', 'node_modules', 'pnpm', 'bin', 'pnpm.cjs')
+      const pnpm = existsSync(bundledPnpm) ? bundledPnpm : developmentPnpm
       const report = await seedStarterPlugins({
         profile: 'dsh',
         dir: this.paths.profile,

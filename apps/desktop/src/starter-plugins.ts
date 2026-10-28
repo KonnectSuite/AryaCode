@@ -7,12 +7,12 @@
  * here.
  *
  * Each entry names an exact, validated build and the tarball that carries it.
- * Shipping the tarball is deliberate: the package is third-party, and its
- * publisher could delete the repository or unpublish the version at any time.
- * With the bytes in our own artifact, an install keeps working in that case,
- * and updates keep working while the registry is alive. `integrity` is verified
- * before install so a substituted or corrupted tarball is refused rather than
- * executed.
+ * Shipping the tarball is deliberate: a third-party publisher could delete the
+ * repository or unpublish the version at any time, and a first run must not
+ * need the network at all. With the bytes in our own artifact, an install keeps
+ * working in both cases, and updates keep working while the registry is alive.
+ * `integrity` is verified before install so a substituted or corrupted tarball
+ * is refused rather than executed.
  *
  * Two rules make the seeded plugin indistinguishable from one installed through
  * the market, and both are enforced by tests:
@@ -45,10 +45,10 @@ export interface StarterPlugin {
 export const STARTER_PLUGINS: readonly StarterPlugin[] = [
   {
     name: '@aryacode/dsh-arya-market',
-    range: '^1.70.1-arya.0.1',
-    version: '1.70.1-arya.0.1',
-    tarball: '',
-    integrity: '',
+    range: '^1.70.1-arya.0.2',
+    version: '1.70.1-arya.0.2',
+    tarball: 'aryacode-dsh-arya-market-1.70.1-arya.0.2.tgz',
+    integrity: 'sha512-nUxE/FNPUFFW56j1WT0app8Zx81bHIL9NbaXByrT+y0kGWDFFBCqz9ATtgo3VZsLiuO3LW/4367DYtu/nOHBRA==',
   },
   {
     name: 'dsh-better-sidebar',

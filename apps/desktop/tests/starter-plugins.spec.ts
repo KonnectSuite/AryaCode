@@ -34,7 +34,14 @@ describe('starter plugin list', () => {
   it('ships the exact validated build of every entry', () => {
     for (const plugin of STARTER_PLUGINS) {
       expect(plugin.version).toMatch(/^\d+\.\d+\.\d+/u)
-      expect(plugin.tarball).toBe(`${plugin.name}-${plugin.version}.tgz`)
+      // npm's own file name for a scoped package: the scope's `@` and `/` are
+      // flattened to `-`, so `@scope/name@1.2.3` ships as `scope-name-1.2.3.tgz`.
+      const fileName = `${plugin.name.replace(/^@/u, '').replace(/\//gu, '-')}-${plugin.version}.tgz`
+      expect(plugin.tarball).toBe(fileName)
+      // A seeded entry with no bytes, or bytes nothing checks, is the shape
+      // that made the market silently unreachable before: every entry is a
+      // verified tarball, first-party included.
+      expect(plugin.integrity).toMatch(/^sha512-[A-Za-z0-9+/]+={0,2}$/u)
       expect(plugin.range).toContain(plugin.version)
     }
   })

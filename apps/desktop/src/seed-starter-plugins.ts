@@ -25,7 +25,8 @@ import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { join, sep } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { STARTER_PLUGINS, type StarterPlugin } from './starter-plugins.ts'
 
 /** Where a profile lives, plus the runtimes used to install into it. */
@@ -81,6 +82,22 @@ export function verifyStarterTarball(seedDir: string, plugin: StarterPlugin): st
     throw new Error(`${plugin.name}: seed tarball ${plugin.tarball} does not match its recorded integrity`)
   }
   return path
+}
+
+/**
+ * Directory that holds the seeded tarballs for the loading module.
+ *
+ * The tarballs are packaged inside the application archive, and a separate pnpm
+ * process cannot open a path inside `app.asar`, so the unpacked copy beside it
+ * is the one to read. A build tree has no archive and resolves to its sibling
+ * `seed` directory either way.
+ * @param moduleUrl - `import.meta.url` of the module that resolves the seed.
+ * @returns Absolute directory containing the seeded tarballs.
+ */
+export function seedDirectory(moduleUrl: string): string {
+  const directory = fileURLToPath(new URL('../seed/', moduleUrl))
+  const archive = `${sep}app.asar${sep}`
+  return directory.includes(archive) ? directory.replace(archive, `${sep}app.asar.unpacked${sep}`) : directory
 }
 
 /** Shape of the fields this module edits in a profile manifest. */
