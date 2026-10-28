@@ -124,7 +124,7 @@ const update = unsigned && !updateOriginNamed
     },
     productName: 'AryaCode',
     // The default copyright uses author.name; this line names the product instead.
-    copyright: `Copyright © ${new Date().getFullYear()} \${productName}`,
+    copyright: `Copyright Â© ${new Date().getFullYear()} \${productName}`,
     // Unsigned builds carry their own suffix so a shared file can never pass for a release artifact.
     artifactName: `aryacode-\${version}-\${os}-\${arch}${output.suffix}.\${ext}`,
     directories: { output: output.directory },
@@ -147,8 +147,10 @@ const update = unsigned && !updateOriginNamed
     },
     files: [
       'lib/main.js',
-    // The starter plugin ships as bytes so a first run needs no network.
-    'seed/**/*',
+      // The starter plugin ships as bytes so a first run needs no network.
+      'seed/**/*',
+      'lib/operation-report-worker.js',
+
       'lib/welcome/**/*',
       'lib/preload-app.cjs',
       'lib/preload-mandatory.cjs',
