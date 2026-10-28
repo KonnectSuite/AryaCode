@@ -261,8 +261,13 @@ function compareToolNames(a: ToolSchema, b: ToolSchema): number {
 
 /** Plugin config: the deployment-authored fragment of the system prompt (see {@link Config.personaPrefix} for its contract). */
 export interface Config {
-  /** Include the fixed DeepSeek Harness identity before the deployment persona (default true). */
+  /** Include the fixed harness identity before the deployment persona (default true). */
   includeHarnessIdentity?: boolean
+  /**
+   * Product name the identity line introduces itself with, so a branded build answers "who are
+   * you?" with its own name instead of the upstream one (default 'DeepSeek Harness').
+   */
+  identityName?: string
   /** Include optional runtime-context snapshots in model history (default true); required context remains. */
   includeRuntimeContext?: boolean
   /**
@@ -435,6 +440,7 @@ export class SystemPrompt extends Service {
   static Config: z<Config> = z.object({
     includeHarnessIdentity: z.boolean().default(true),
     includeRuntimeContext: z.boolean().default(true),
+    identityName: z.string().default('DeepSeek Harness'),
     personaPrefix: z.string().default(''),
     personaSuffix: z.string().default(''),
     // Preserve omission because an explicit empty order lacks the rest marker.
@@ -452,10 +458,11 @@ export class SystemPrompt extends Service {
     this.toolOrder = validateToolOrder(config.toolOrder)
     // Keep harness-owned openers independent of the selected loop plugin.
     if (config.includeHarnessIdentity ?? true) {
+      const identityName = (config.identityName ?? '').trim() || 'DeepSeek Harness'
       this.section({
         name: 'harness:identity',
         order: this.getSectionOrder('HARNESS_IDENTITY'),
-        text: 'You are an AI agent powered by DeepSeek Harness.',
+        text: `You are an AI agent powered by ${identityName}.`,
       })
     }
     this.section({

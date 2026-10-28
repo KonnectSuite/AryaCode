@@ -217,6 +217,20 @@ describe('SystemPrompt', () => {
       }
     })
 
+    it('names the configured product in the identity line', async () => {
+      const ctx = new Context()
+      await ctx.plugin(SystemPrompt, { identityName: 'AryaCode' })
+
+      expect(renderPrompt(await ctx.systemPrompt.assemble())).toBe('You are an AI agent powered by AryaCode.')
+    })
+
+    it('falls back to the upstream name for a blank identity', async () => {
+      const ctx = new Context()
+      await ctx.plugin(SystemPrompt, { identityName: '   ' })
+
+      expect(renderPrompt(await ctx.systemPrompt.assemble())).toBe(IDENTITY)
+    })
+
     it('registers the harness identity and the configured deployment persona', async () => {
       const ctx = new Context()
       await ctx.plugin(SystemPrompt, { personaPrefix: 'You are DeepSeek Harness.' })
