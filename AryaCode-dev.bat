@@ -69,20 +69,25 @@ if /i "%MODE%"=="check" (
 )
 
 rem --- isolation -----------------------------------------------------------
-rem  DSH keeps every profile, plugin and session under DSH_HOME, and this
-rem  machine has DSH_HOME set at user level. Inheriting it would point the dev
-rem  run at data the installed instance also uses, so this run gets its own
-rem  root and touches nothing outside it.
+rem  The desktop app keeps its profile and Electron cache under ARYACODE_HOME
+rem  (apps/desktop/src/paths.ts), not DSH_HOME, and this machine has both set at
+rem  user level. Inheriting them would point the dev run at data the installed
+rem  instance also uses - same profile, and the same single-instance lock, which
+rem  makes the dev app quit silently while the installed one runs. This run gets
+rem  its own root and touches nothing outside it.
 set "INHERITED_HOME=!DSH_HOME!"
+set "INHERITED_ARYACODE_HOME=!ARYACODE_HOME!"
 set "DEVHOME=%LOCALAPPDATA%\AryaCode-dev\home"
 set "DSH_HOME=%DEVHOME%"
+set "ARYACODE_HOME=%DEVHOME%"
 if not exist "%DEVHOME%" mkdir "%DEVHOME%" >nul 2>&1
 echo.
 echo   [i] inherited DSH_HOME: "!INHERITED_HOME!"
-echo   [ok] this run is isolated to: "!DSH_HOME!"
+echo   [i] inherited ARYACODE_HOME: "!INHERITED_ARYACODE_HOME!"
+echo   [ok] this run is isolated to: "!DEVHOME!"
 echo        profiles, plugins and sessions stay out of the installed instance
-echo   [i] Electron userData for dev is kept inside the checkout by
-echo        apps/desktop/scripts/dev.ts (override: DSH_DESKTOP_USER_DATA_DIR)
+echo   [i] Electron userData follows ARYACODE_HOME; override it with
+echo        DSH_DESKTOP_USER_DATA_DIR when that path is not appropriate
 rem  %TEMP% is shared with every process on the machine, and esbuild names its
 rem  temp file after a hash of the content: two builds running at once - this
 rem  one and a watcher left behind by an earlier launch - pick the same path, and
