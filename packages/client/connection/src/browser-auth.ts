@@ -113,8 +113,31 @@ function tokenMatches(actual: string, expected: string): boolean {
   return actualBytes.byteLength === expectedBytes.byteLength && timingSafeEqual(actualBytes, expectedBytes)
 }
 
+/**
+ * Cookie name for an audience.
+ *
+ * The name is keyed on the Host, never on the authority: a plain-HTTP audience
+ * carries the ephemeral port, so keying the name on it added another cookie to
+ * the browser jar on every launch and nothing ever removed the older ones. Once
+ * they pushed the request header past Node's 16 KiB limit the Host answered 431
+ * before authentication ran, and the shell reported it as an authentication
+ * failure. The signed payload still carries the full authority, so a cookie
+ * minted for one Host instance never authenticates another.
+ * @param authority - Request audience, `host` or `host:port`.
+ * @returns the generated cookie name for the Host.
+ */
 function cookieName(authority: string): string {
-  return COOKIE_PREFIX + encodeBase64Url(createHash('sha256').update(authority).digest())
+  return COOKIE_PREFIX + encodeBase64Url(createHash('sha256').update(cookieHost(authority)).digest())
+}
+
+/** Host part of an audience: `[::1]:4100` → `[::1]`, `127.0.0.1:4100` → `127.0.0.1`. */
+function cookieHost(authority: string): string {
+  if (authority.startsWith('[')) {
+    const end = authority.indexOf(']')
+    return end === -1 ? authority : authority.slice(0, end + 1)
+  }
+  const colon = authority.lastIndexOf(':')
+  return colon === -1 ? authority : authority.slice(0, colon)
 }
 
 /** Read the exact generated cookie without implementing general Cookie decoding. */

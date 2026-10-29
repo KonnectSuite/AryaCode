@@ -48,7 +48,11 @@ export async function connectDesktopWelcome(
   const origin = new URL(authenticatedUrl).origin
   const authenticated = await send(authenticatedUrl, { credentials: 'include' })
   await authenticated.body?.cancel()
-  if (!authenticated.ok) throw new Error('desktop welcome: Web authentication failed')
+  if (!authenticated.ok) {
+    // Carry the status: a 431 from an oversized request header is not a
+    // credential problem, and the bare message sent people hunting for one.
+    throw new Error(`desktop welcome: Web authentication failed (HTTP ${String(authenticated.status)})`)
+  }
   const invoke = async (
     request: { namespace: string; method: string; args: Record<string, unknown> },
     signal?: AbortSignal,

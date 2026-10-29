@@ -44,7 +44,11 @@ export async function authenticateWebHost(url: string): Promise<string> {
   const response = await fetch(url, { redirect: 'manual' })
   const cookie = response.headers.get('set-cookie')
   await response.body?.cancel()
-  if (response.status !== 303 || cookie === null) throw new Error('Desktop Host authentication failed')
+  if (response.status !== 303 || cookie === null) {
+    // The status is the diagnosis: 431 means the request header was too large,
+    // which no credential change can fix.
+    throw new Error(`Desktop Host authentication failed (HTTP ${String(response.status)})`)
+  }
   const end = cookie.indexOf(';')
   return end < 0 ? cookie : cookie.slice(0, end)
 }

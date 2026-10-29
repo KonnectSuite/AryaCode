@@ -102,6 +102,33 @@ function quitWithoutConfirmation(): void {
   skipQuitConfirmation = true
   app.quit()
 }
+/**
+ * Drop authentication cookies a previous launch left for this Host.
+ *
+ * The cookie is named after the Host, and the Host picks a new port on every
+ * launch. Older builds named it after `host:port`, so each launch added a
+ * cookie and nothing removed the previous one; a jar that grew for weeks
+ * eventually made every request header exceed Node's limit, and the Host
+ * answered 431 before authentication could run. Removing them here keeps a
+ * machine that already accumulated them working without a profile reset.
+ * @param url - Authenticated Host URL for this launch.
+ */
+async function pruneHostCookies(url: string): Promise<void> {
+  const host = new URL(url).hostname
+  try {
+    const jar = session.defaultSession.cookies
+    const stale = (await jar.get({})).filter(cookie => cookie.name.startsWith('dsh-auth-')
+      && (cookie.domain ?? '').replace(/^\./u, '') === host)
+    for (const cookie of stale) {
+      await jar.remove(`${cookie.secure ? 'https' : 'http'}://${host}${cookie.path ?? '/'}`, cookie.name)
+    }
+    if (stale.length > 0) console.info(`desktop: dropped ${String(stale.length)} Host authentication cookie(s)`)
+  } catch (error) {
+    // A cookie jar that will not answer must not stop the launch; the Host
+    // raises its header ceiling for the other direction.
+    console.warn('desktop: could not prune Host authentication cookies', error)
+  }
+}
 const recovery = new DesktopFatalRecovery({
   messages: () => currentDesktopLocale().messages,
   show: options => dialog.showMessageBox(options),
@@ -533,6 +560,7 @@ async function main(): Promise<void> {
     return {
       start: async () => {
         const ready = await host.start()
+        await pruneHostCookies(ready.url)
         hostCookie = await authenticateWebHost(ready.url)
         hostUrl = ready.url
         if (ready.injections === undefined) throw new Error('Desktop Host did not provide boot injections')

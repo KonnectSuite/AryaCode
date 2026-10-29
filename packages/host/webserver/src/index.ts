@@ -27,6 +27,16 @@ import { renderIndexInjections, type IndexInjection } from './injections.ts'
 export { renderIndexInjections } from './injections.ts'
 export type { IndexInjection, IndexInjectionPlacement } from './injections.ts'
 
+/**
+ * Request-header ceiling for every listener.
+ *
+ * Node's 16 KiB default is easy for a browser to exceed with a loaded cookie
+ * jar, and a Host that refuses the handshake cannot explain itself: the shell
+ * only sees a failed request. A ceiling this high cannot overflow a buffer,
+ * because only the parsed header block is buffered.
+ */
+const MAX_HEADER_SIZE = 64 * 1024
+
 declare module '@deepseek-ai/cordis' {
   interface Context {
     webServer: WebServer
@@ -563,7 +573,7 @@ export class WebServer extends Service {
     // Disposal waits for in-flight acquisition and closes any listener it produces.
     await this.ctx.effect(async () => {
       if (tls === undefined) {
-        this.server = createServer(listener)
+        this.server = createServer({ maxHeaderSize: MAX_HEADER_SIZE }, listener)
       } else {
         const certFile = resolve(tls.certFile)
         const keyFile = resolve(tls.keyFile)
@@ -572,7 +582,7 @@ export class WebServer extends Service {
           readTlsFile('keyFile', keyFile),
         ])
         try {
-          this.server = createSecureServer({ cert, key }, listener)
+          this.server = createSecureServer({ cert, key, maxHeaderSize: MAX_HEADER_SIZE }, listener)
         } catch (error) {
           throw new Error(`webserver: tls.certFile ${certFile} and tls.keyFile ${keyFile} are not a usable certificate and key pair: ${error instanceof Error ? error.message : String(error)}`)
         }

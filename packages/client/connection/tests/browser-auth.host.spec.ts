@@ -368,3 +368,23 @@ describe('BrowserAuth', () => {
       .rejects.toThrow(/safe timestamp range/u)
   })
 })
+
+describe('browser cookie jar', () => {
+  it('reuses one cookie name per Host so a new port cannot grow the jar', async () => {
+    const store = new RecordCredentials()
+    const first = await createAuth(store)
+    const second = await createAuth(store)
+    const older = exchange(first, '127.0.0.1:3080')
+    const newer = exchange(second, '127.0.0.1:4100')
+    const nameOf = (cookie: string): string => cookie.slice(0, cookie.indexOf('='))
+
+    expect(nameOf(older.cookie)).toMatch(/^dsh-auth-/u)
+    // Same name: the browser replaces the previous launch's cookie instead of
+    // keeping both, so the request header cannot grow one cookie per launch.
+    expect(nameOf(older.cookie)).toBe(nameOf(newer.cookie))
+    expect(older.cookie).not.toBe(newer.cookie)
+    // The payload still binds the ephemeral port, so the older value is inert.
+    expect(second.isAuthenticated(request('/', '127.0.0.1:4100', { cookie: older.cookie }))).toBe(false)
+    expect(second.isAuthenticated(request('/', '127.0.0.1:4100', { cookie: newer.cookie }))).toBe(true)
+  })
+})

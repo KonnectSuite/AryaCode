@@ -1078,3 +1078,33 @@ describe('real Loader composition', () => {
     await expect(fiber?.await()).rejects.toThrow('EADDRINUSE')
   })
 })
+
+describe('request header ceiling', () => {
+  it('answers a request whose cookie jar is far past the Node default', { timeout: 60_000 }, async () => {
+    const loaded = await loadComposition(0, true)
+    const server = loaded.webServer
+    server.register({
+      kind: 'exact',
+      path: '/alive',
+      handler: (_req, res) => {
+        res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' })
+        res.end('alive')
+      },
+    })
+    // A browser that kept one cookie per launch reaches this size before it
+    // reaches the point where authentication could clean anything up.
+    const jar = `dsh-auth-${'A'.repeat(40)}=${'B'.repeat(200)}; `.repeat(120).slice(0, -2)
+    const response = await rawExchange(server.port, [
+      'GET /alive HTTP/1.1',
+      `Host: 127.0.0.1:${String(server.port)}`,
+      `Cookie: ${jar}`,
+      'Connection: close',
+      '',
+      '',
+    ].join('\r\n'))
+
+    expect(jar.length).toBeGreaterThan(16 * 1024)
+    expect(response).toContain('200 OK')
+    expect(response).toContain('alive')
+  })
+})
