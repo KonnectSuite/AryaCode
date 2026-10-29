@@ -3,13 +3,22 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { seedStarterPlugins } from '../src/seed-starter-plugins.ts'
-import { STARTER_PLUGINS } from '../src/starter-plugins.ts'
+import { STARTER_PLUGINS, type StarterPlugin } from '../src/starter-plugins.ts'
 
 /** Directory holding the shipped seed tarballs. */
 const SEED_DIR = join(import.meta.dirname, '..', 'seed')
 
-/** The market entry: first in the list, and the one an installer must carry forward. */
-const MARKET = STARTER_PLUGINS[0]
+/** The market's package name: the entry an installer must carry forward. */
+const MARKET_NAME = '@aryacode/dsh-arya-market'
+
+/** The market entry itself, resolved once so a missing entry fails loudly. */
+function marketEntry(): StarterPlugin {
+  const entry = STARTER_PLUGINS.find(plugin => plugin.name === MARKET_NAME)
+  if (entry === undefined) throw new Error(`the starter list does not carry ${MARKET_NAME}`)
+  return entry
+}
+
+const MARKET = marketEntry()
 
 /** A version older than anything published, so it always loses the comparison. */
 const OLD = '0.0.1'
