@@ -15,8 +15,12 @@
  *    `file:` spec would pin the profile to the installer's bytes forever and the
  *    market could never update it - the treadmill this project exists to escape.
  *
- * Idempotent: an existing install at any version is left alone, so a deliberate
- * uninstall or downgrade survives the next boot.
+ * Idempotent, but not frozen: a plugin the profile already has is left alone
+ * unless this build ships a newer one, in which case the newer one replaces it.
+ * That is what carries the market itself forward - the market is part of the app,
+ * and a profile seeded before a market fix would otherwise keep the old market
+ * forever, which is how an installer "update" could still leave the in-use
+ * plugin update bug in place.
  *
  * @module seed-starter-plugins
  */
@@ -27,6 +31,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { writeFile } from 'node:fs/promises'
 import { join, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { gt, valid } from 'semver'
 import { STARTER_PLUGINS, type StarterPlugin } from './starter-plugins.ts'
 
 /** Where a profile lives, plus the runtimes used to install into it. */
@@ -49,8 +54,28 @@ export interface SeedReport {
   readonly installed: readonly string[]
   /** Plugin names already present, left untouched. */
   readonly present: readonly string[]
+  /** Plugin names the shipped build was newer than, replaced in place. */
+  readonly upgraded: readonly string[]
   /** Plugin names that could not be installed, with the reason. */
   readonly failed: readonly { readonly name: string; readonly reason: string }[]
+}
+
+/**
+ * Whether a profile's copy is older than the one this build ships.
+ *
+ * A profile that already has a plugin is not automatically up to date: the
+ * market is part of the app, and a profile seeded by an older installer keeps
+ * that installer's market forever unless the seed is allowed to replace it. The
+ * market is where plugin-update bugs get fixed, so a newer one must win.
+ * @param existing - Version found in the profile's node_modules.
+ * @param shipped - Version this build ships in the seed directory.
+ * @returns true when the shipped one is newer, false when equal, newer, or unknown.
+ */
+function isOlder(existing: string, shipped: string): boolean {
+  const before = valid(existing)
+  const after = valid(shipped)
+  if (before === null || after === null) return false
+  return gt(after, before)
 }
 
 /** Read a plugin's version from a profile's node_modules, if present. */
@@ -140,10 +165,11 @@ export async function seedStarterPlugins(
 ): Promise<SeedReport> {
   const installed: string[] = []
   const present: string[] = []
+  const upgraded: string[] = []
   const failed: { name: string; reason: string }[] = []
   for (const plugin of STARTER_PLUGINS) {
     const existing = installedVersion(target.dir, plugin.name)
-    if (existing !== undefined) {
+    if (existing !== undefined && !isOlder(existing, plugin.version)) {
       present.push(`${plugin.name}@${existing}`)
       continue
     }
@@ -164,10 +190,11 @@ export async function seedStarterPlugins(
         continue
       }
       await recordInstall(target.dir, plugin.name, plugin.range)
-      installed.push(plugin.name)
+      if (existing === undefined) installed.push(plugin.name)
+      else upgraded.push(`${plugin.name}@${existing}`)
     } catch (error) {
       failed.push({ name: plugin.name, reason: error instanceof Error ? error.message : String(error) })
     }
   }
-  return { installed, present, failed }
+  return { installed, present, upgraded, failed }
 }

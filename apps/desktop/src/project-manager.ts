@@ -126,6 +126,7 @@ export class DesktopProjectManager {
         pnpm,
       })
       appendFileSync(logPath, 'seed: installed=' + report.installed.join(',')
+        + ' upgraded=' + report.upgraded.join(',')
         + ' present=' + report.present.join(',')
         + ' failed=' + report.failed.map(f => f.name + ':' + f.reason).join(',') + '\n')
       for (const failure of report.failed) {
