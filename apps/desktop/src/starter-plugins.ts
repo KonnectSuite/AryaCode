@@ -55,10 +55,10 @@ export const STARTER_PLUGINS: readonly StarterPlugin[] = [
   },
   {
     name: '@aryacode/dsh-engineering',
-    range: '^0.20.2',
-    version: '0.20.2',
-    tarball: 'aryacode-dsh-engineering-0.20.2.tgz',
-    integrity: 'sha512-WIgVVxmHJzGou0aT1x8KhhO0pTCSFOFsSXstcv7SIK0eTCIxWOezZNKWSYSm3U6Yk0a68R4tnY2ge6dFzFrY5A==',
+    range: '^0.22.2',
+    version: '0.22.2',
+    tarball: 'aryacode-dsh-engineering-0.22.2.tgz',
+    integrity: 'sha512-F0Pqf8RLg47gEaUIBP9JZ7AvDceMDujWW84aZm7b8wsbxh4U1g/OfQ+E3PU0Gyjb4P7SxGITpQKujJtaLWr+lA==',
   },
   {
     name: 'dsh-better-sidebar',
