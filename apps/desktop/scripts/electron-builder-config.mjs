@@ -98,13 +98,15 @@ export function createElectronBuilderConfig(
   if (windowsSigner !== undefined) {
     installWindowsNsisBootstrapSigner({ sign: windowsSigner })
   }
-  // An unsigned build keeps its update feed when an origin is named explicitly: the
-// feed delivers updates, the signature proves who built the file, and a private
-// deployment can want the first without the second.
-const updateOriginNamed = (env.DOWNLOAD_TEST_ORIGIN ?? env.DOWNLOAD_PROD_ORIGIN ?? '').trim() !== ''
-const update = unsigned && !updateOriginNamed
-  ? undefined
-  : resolveDesktopAutoUpdateConfig(env, resolvedPlatform, resolvedArch)
+  // An unsigned Windows build keeps its update feed when an origin is named explicitly: the
+  // feed delivers updates, the signature proves who built the file, and AryaCode ships
+  // unsigned, so the feed is the only path an installed copy has to a newer build. macOS
+  // keeps the upstream rule, where an unsigned local build carries no feed at all.
+  const updateOriginNamed = resolvedPlatform === 'win32'
+    && (env.DOWNLOAD_TEST_ORIGIN ?? env.DOWNLOAD_PROD_ORIGIN ?? '').trim() !== ''
+  const update = unsigned && !updateOriginNamed
+    ? undefined
+    : resolveDesktopAutoUpdateConfig(env, resolvedPlatform, resolvedArch)
   if (preparedRuntime !== undefined) buildPaths.dsh = preparedRuntime
   // electron-builder merges extraMetadata into the packaged manifest, so a build version here reaches
   // the artifact names, the update feed, and the installed app.getVersion() the updater compares against.
@@ -124,7 +126,7 @@ const update = unsigned && !updateOriginNamed
     },
     productName: 'AryaCode',
     // The default copyright uses author.name; this line names the product instead.
-    copyright: `Copyright Â© ${new Date().getFullYear()} \${productName}`,
+    copyright: `Copyright © ${new Date().getFullYear()} \${productName}`,
     // Unsigned builds carry their own suffix so a shared file can never pass for a release artifact.
     artifactName: `aryacode-\${version}-\${os}-\${arch}${output.suffix}.\${ext}`,
     directories: { output: output.directory },

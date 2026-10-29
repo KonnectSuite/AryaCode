@@ -43,8 +43,9 @@ it('shows the application icon with its name as the tooltip and an Open / Quit m
   const f = setup()
   expect(native.createFromPath).toHaveBeenCalledWith('C:/app/resources/tray.ico')
   expect(f.native.image).toEqual({ path: 'C:/app/resources/tray.ico' })
-  expect(f.native.setToolTip).toHaveBeenCalledWith('DeepSeek Harness')
-  expect(labels(native.menus[0]!)).toEqual(['Open DeepSeek Harness', 'separator', 'Quit DeepSeek Harness'])
+  expect(f.native.setToolTip).toHaveBeenCalledWith(resolveDesktopLocale('en').messages.aboutProduct)
+  const en = resolveDesktopLocale('en').messages
+  expect(labels(native.menus[0]!)).toEqual([en.openApplication, 'separator', en.quitApplication])
   expect(f.native.setContextMenu).toHaveBeenCalledWith({ template: native.menus[0] })
 })
 
@@ -63,7 +64,8 @@ it('relabels the menu in the current locale and ignores relabel after disposal',
   const f = setup()
   f.setLocale('zh')
   f.tray.relabel()
-  expect(labels(native.menus[1]!)).toEqual(['打开 DeepSeek Harness', 'separator', '退出 DeepSeek Harness'])
+  const zh = resolveDesktopLocale('zh').messages
+  expect(labels(native.menus[1]!)).toEqual([zh.openApplication, 'separator', zh.quitApplication])
   f.tray.dispose()
   f.tray.dispose()
   expect(f.native.destroy).toHaveBeenCalledOnce()
