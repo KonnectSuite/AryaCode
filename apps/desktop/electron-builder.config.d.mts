@@ -3,6 +3,7 @@ import type { AfterPackContext, BeforePackContext } from 'app-builder-lib'
 /** Electron-builder fields asserted by the Desktop release tests. */
 export interface DesktopElectronBuilderConfig {
   readonly appId: string
+  readonly productName: 'AryaCode'
   readonly copyright: string
   readonly artifactName: string
   readonly protocols: readonly [{ readonly name: 'AryaCode'; readonly schemes: readonly ['dsh'] }]
