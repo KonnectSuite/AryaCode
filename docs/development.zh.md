@@ -203,6 +203,52 @@ pnpm run dev:desktop     # build, then launch Desktop
 
 Web 命令后面的参数会传给 `dsh web`，例如 `pnpm run dev:web --no-open --port 3081`；`dev:web` 还接受 `--skip-build` 复用现有产物树，以及 `--no-serve` 只运行重建 watcher、配合别处启动的服务器。两个 Web 命令使用正常的 Harness home，而 Desktop 命令使用 [Desktop README](../apps/desktop/README.zh.md) 描述的隔离开发 home。根目录 `Makefile` 以 `make web`、`make dev-web`、`make desktop`、`make dev-desktop` 和 `make build` 命名同一套命令；`ARGS='--no-open'` 用于转发参数。
 
+### 从脚本启动桌面应用
+
+仓库根目录的 [`AryaCode-dev.bat`](../AryaCode-dev.bat) 是一条命令的开发启动方式。它检查 Node 与 pnpm、清除继承来的 `ELECTRON_RUN_AS_NODE`、把本次运行隔离到 `%LOCALAPPDATA%\AryaCode-dev\home`（`DSH_HOME` 与 `ARYACODE_HOME`）、为构建提供私有临时目录、带重试地构建一次产物，然后不再重建直接启动。
+
+第一个位置参数选择模式：
+
+- 不带参数或 `desktop` —— Electron 桌面应用，默认模式。
+- `web` —— 改为在浏览器中运行 Web GUI。
+- `check` —— 只检查前置条件，不安装也不启动。
+
+```bat
+AryaCode-dev.bat
+AryaCode-dev.bat web
+AryaCode-dev.bat check
+```
+
+后台启动没有可读的控制台。请通过一个小包装脚本启动，并把输出重定向到日志；Host 会把自己的 URL 打印在那里。
+
+```bat
+@echo off
+set "ELECTRON_RUN_AS_NODE="
+set "ELECTRON_NO_ATTACH_CONSOLE="
+call "C:\path\to\AryaCode\AryaCode-dev.bat" desktop > "%LOCALAPPDATA%\AryaCode-dev\dev.log" 2>&1
+```
+
+以分离方式启动该包装脚本（`Start-Process cmd.exe -ArgumentList '/c', '<wrapper>.cmd' -WindowStyle Minimized`）。冷启动会先构建，需要数分钟，开发环境的 harness 就绪时会打印下面这一行；请跟踪日志等待它，而不是猜测端口。
+
+```
+dsh web: http://127.0.0.1:<port>/?token=<token>
+```
+
+`AryaCode-dev.bat web` 为浏览器 GUI 打印同一行。
+
+包装脚本会清除 `ELECTRON_RUN_AS_NODE`：从另一个 Electron 宿主启动的 Electron 会退化为普通 Node，并拒绝 `--user-data-dir`、`--remote-debugging-port` 以及内置 pnpm 入口，报 `bad option`；启动器本身也会清除它，从这类 shell 直接执行 `pnpm run dev:desktop` 时同样需要处理。
+
+同一时间只能运行一个开发实例。Electron 会对 profile 持有进程级单实例锁，Main、Renderer 与 Host 调试分别固定绑定端口 9229、9222、9230；第二次启动会报 `address already in use` 并退出。重新启动前先停止上一个实例。
+
+启动 URL 携带 Host 的一次性 token。访问它会写入 Host cookie，这是本地 `api/*` 路由所需：
+
+```sh
+curl -c cookies.txt "http://127.0.0.1:<port>/?token=<token>"
+curl -b cookies.txt -X POST "http://127.0.0.1:<port>/api/<route>" -H 'content-type: application/json' -d '{"action":"list"}'
+```
+
+要在开发实例中试用位于另一个检出中的插件，请在开发 profile（`%LOCALAPPDATA%\AryaCode-dev\home\profiles\desktop\package.json`，依赖值写成 `file:C:/path/to/plugin-<version>.tgz`）中固定打包好的 tarball，并在该目录执行 `pnpm install`。`pnpm` 不会重新获取未变更的 `file:` 依赖，因此每次安装都需要新的版本号；包名同时要加入 `dsh.profile.bundles`。
+
 ### TODO 标记
 
 请使用以下三种注释标签之一标记代码中的已知问题，按紧急程度排序：

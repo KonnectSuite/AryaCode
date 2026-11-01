@@ -198,6 +198,52 @@ pnpm run dev:desktop     # build, then launch Desktop
 
 Arguments after a Web command reach `dsh web`, for example `pnpm run dev:web --no-open --port 3081`; `dev:web` also accepts `--skip-build` to reuse the existing artifact tree and `--no-serve` to run only the rebuild watchers beside a server started elsewhere. Both Web commands use the normal Harness home, while the Desktop commands use the isolated development home described in the [Desktop README](../apps/desktop/README.md). The root `Makefile` names the same commands as `make web`, `make dev-web`, `make desktop`, `make dev-desktop`, and `make build`; `ARGS='--no-open'` forwards options.
 
+### Launching the desktop app from a script
+
+[`AryaCode-dev.bat`](../AryaCode-dev.bat) at the repository root is the one-command dev launch. It checks Node and pnpm, clears an inherited `ELECTRON_RUN_AS_NODE`, isolates the run to `%LOCALAPPDATA%\AryaCode-dev\home` (both `DSH_HOME` and `ARYACODE_HOME`), gives the build a private temp directory, builds the artifacts once with retries, and then launches them without rebuilding.
+
+The first positional argument selects the mode:
+
+- no argument or `desktop` — the Electron desktop app; the default.
+- `web` — the Web GUI in a browser instead.
+- `check` — prerequisites only; installs and starts nothing.
+
+```bat
+AryaCode-dev.bat
+AryaCode-dev.bat web
+AryaCode-dev.bat check
+```
+
+A background launch has no console to read. Start the launcher through a small wrapper that redirects its output to a log, and keep that log: the Host prints its URL there.
+
+```bat
+@echo off
+set "ELECTRON_RUN_AS_NODE="
+set "ELECTRON_NO_ATTACH_CONSOLE="
+call "C:\path\to\AryaCode\AryaCode-dev.bat" desktop > "%LOCALAPPDATA%\AryaCode-dev\dev.log" 2>&1
+```
+
+Start the wrapper detached (`Start-Process cmd.exe -ArgumentList '/c', '<wrapper>.cmd' -WindowStyle Minimized`). A cold launch builds first and takes several minutes, and the development harness prints the line below when it is ready; tail the log for it instead of guessing a port.
+
+```
+dsh web: http://127.0.0.1:<port>/?token=<token>
+```
+
+`AryaCode-dev.bat web` prints the same line for the browser GUI.
+
+The wrapper clears `ELECTRON_RUN_AS_NODE` because Electron started from another Electron host behaves as plain Node and rejects `--user-data-dir`, `--remote-debugging-port` and the bundled pnpm entry with `bad option`; the launcher clears it as well, and a direct `pnpm run dev:desktop` from such a shell needs the same treatment.
+
+Only one development instance runs at a time. Electron takes a process-lifetime single-instance lock on the profile, and Main, Renderer, and Host debugging bind fixed ports 9229, 9222, and 9230; a second launch reports `address already in use` and exits. Stop the previous instance before relaunching.
+
+The boot URL carries the Host's one-time token. Requesting it sets the Host cookie, which is what the local `api/*` routes require:
+
+```sh
+curl -c cookies.txt "http://127.0.0.1:<port>/?token=<token>"
+curl -b cookies.txt -X POST "http://127.0.0.1:<port>/api/<route>" -H 'content-type: application/json' -d '{"action":"list"}'
+```
+
+To exercise a plugin kept in another checkout, pin its packed tarball in the development profile (`%LOCALAPPDATA%\AryaCode-dev\home\profiles\desktop\package.json`, dependency value `file:C:/path/to/plugin-<version>.tgz`) and run `pnpm install` in that directory. `pnpm` does not refetch an unchanged `file:` dependency, so each install needs a new version number; the package name also belongs in `dsh.profile.bundles`.
+
 ### TODO markers
 
 Use one of three comment tags to flag known issues in the code, ordered by urgency:
