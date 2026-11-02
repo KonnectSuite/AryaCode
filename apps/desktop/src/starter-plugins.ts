@@ -48,17 +48,17 @@ export interface StarterPlugin {
 export const STARTER_PLUGINS: readonly StarterPlugin[] = [
   {
     name: '@aryacode/dsh-arya-market',
-    range: '^1.70.1-arya.0.2',
-    version: '1.70.1-arya.0.2',
-    tarball: 'aryacode-dsh-arya-market-1.70.1-arya.0.2.tgz',
-    integrity: 'sha512-nUxE/FNPUFFW56j1WT0app8Zx81bHIL9NbaXByrT+y0kGWDFFBCqz9ATtgo3VZsLiuO3LW/4367DYtu/nOHBRA==',
+    range: '^1.70.1-arya.0.3',
+    version: '1.70.1-arya.0.3',
+    tarball: 'aryacode-dsh-arya-market-1.70.1-arya.0.3.tgz',
+    integrity: 'sha512-va98wX022ypwIO0+AQ0kzMDQAoLQcGQUc/KjQT9uqYtyN1K8QBnT0ev1v+zEAFE3zz0Id0SA8PWIFRKLHwamSg==',
   },
   {
     name: '@aryacode/dsh-engineering',
-    range: '^0.22.2',
-    version: '0.22.2',
-    tarball: 'aryacode-dsh-engineering-0.22.2.tgz',
-    integrity: 'sha512-F0Pqf8RLg47gEaUIBP9JZ7AvDceMDujWW84aZm7b8wsbxh4U1g/OfQ+E3PU0Gyjb4P7SxGITpQKujJtaLWr+lA==',
+    range: '^0.77.0',
+    version: '0.77.0',
+    tarball: 'aryacode-dsh-engineering-0.77.0.tgz',
+    integrity: 'sha512-CMHomPqAHG1rRUNjmK8+oV/aw1unVw1ktT31nLoAIZSWrtThbR5QE89QxyQi6gR6pd7pBH+9nuebRP+LP7xtZw==',
   },
   {
     name: 'dsh-better-sidebar',
