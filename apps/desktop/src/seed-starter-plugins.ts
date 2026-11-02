@@ -27,7 +27,7 @@
 
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { writeFile } from 'node:fs/promises'
 import { join, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -76,6 +76,52 @@ function isOlder(existing: string, shipped: string): boolean {
   const after = valid(shipped)
   if (before === null || after === null) return false
   return gt(after, before)
+}
+
+
+/**
+ * Turn off pnpm's fresh-release hold in a profile the seed owns.
+ *
+ * pnpm 11.28 enforces `minimumReleaseAge` by default — 24 hours — and it
+ * verifies the WHOLE lockfile on every install. Every plugin this product
+ * publishes is younger than that, so a profile that has installed one can no
+ * longer install anything: the market's Update button fails with
+ * `ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION` naming a version it did not even
+ * ask for. The one-shot bypass (`--config.minimumReleaseAge=0`) exists, but the
+ * official desktop host runs pnpm itself and takes no options from a plugin, so
+ * it is unreachable from the surface that performs updates.
+ *
+ * Seeding a profile therefore sets the same policy permanently, in the file
+ * pnpm reads it from. This is a deliberate product decision, not a workaround:
+ * the Arya catalog pins a sha256 per release and the market verifies it before
+ * installing, which is the protection this hold approximates. A profile that
+ * already states a value keeps it — a person who chose a window is not overruled.
+ *
+ * @param dir - Profile directory.
+ * @returns 'set' when this call wrote the policy, 'present' when one already existed.
+ */
+export function ensureReleaseAgePolicy(dir: string): 'set' | 'present' {
+  const file = join(dir, 'pnpm-workspace.yaml')
+  const header = '# Written by AryaCode: pnpm defaults to a 24-hour minimumReleaseAge, which\n'
+    + '# refuses every AryaCode plugin release until it ages out. Releases are\n'
+    + '# sha256-pinned by the plugin catalog, so the hold is redundant here.\n'
+  let yaml = ''
+  if (existsSync(file)) {
+    yaml = readFileSync(file, 'utf8')
+    if (/^minimumReleaseAge:/mu.test(yaml)) return 'present'
+  }
+  const eol = yaml.includes('\r\n') ? '\r\n' : '\n'
+  const line = `minimumReleaseAge: 0${eol}`
+  // Keep the key above the exclude list when one exists, so the two read together.
+  if (/^minimumReleaseAgeExclude:/mu.test(yaml)) {
+    yaml = yaml.replace(/^minimumReleaseAgeExclude:/mu, line + 'minimumReleaseAgeExclude:')
+  } else if (yaml === '') {
+    yaml = `packages:${eol}  - .${eol}${eol}${header}${line}`
+  } else {
+    yaml = yaml.replace(/\n$/, '') + eol + header + line
+  }
+  writeFileSync(file, yaml)
+  return 'set'
 }
 
 /** Read a plugin's version from a profile's node_modules, if present. */
@@ -163,6 +209,8 @@ export async function seedStarterPlugins(
   target: SeedTarget,
   onOutput: (text: string) => void = () => {},
 ): Promise<SeedReport> {
+  // Before any install: the profile must be able to accept a fresh release.
+  ensureReleaseAgePolicy(target.dir)
   const installed: string[] = []
   const present: string[] = []
   const upgraded: string[] = []

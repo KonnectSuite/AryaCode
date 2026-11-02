@@ -1,8 +1,8 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { seedStarterPlugins } from '../src/seed-starter-plugins.ts'
+import { ensureReleaseAgePolicy, seedStarterPlugins } from '../src/seed-starter-plugins.ts'
 import { STARTER_PLUGINS, type StarterPlugin } from '../src/starter-plugins.ts'
 
 /** Directory holding the shipped seed tarballs. */
@@ -109,5 +109,33 @@ describe('seeding an existing profile', () => {
     })
     expect(report.failed.map(entry => entry.name)).toContain(MARKET.name)
     expect(report.failed.find(entry => entry.name === MARKET.name)?.reason).toContain('does not match its recorded integrity')
+  })
+})
+
+describe('the profile release-age policy', () => {
+  it('turns off the hold a profile has never stated', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'seed-policy-'))
+    try {
+      writeFileSync(join(dir, 'pnpm-workspace.yaml'), 'packages:\n  - .\n\nnodeLinker: hoisted\n')
+      expect(ensureReleaseAgePolicy(dir)).toBe('set')
+      const yaml = readFileSync(join(dir, 'pnpm-workspace.yaml'), 'utf8')
+      expect(yaml).toContain('minimumReleaseAge: 0')
+      // Stated once, the policy must not accumulate copies on later runs.
+      expect(ensureReleaseAgePolicy(dir)).toBe('present')
+      expect(yaml.match(/minimumReleaseAge:/gu)).toHaveLength(1)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('keeps a window a person chose', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'seed-policy-keep-'))
+    try {
+      writeFileSync(join(dir, 'pnpm-workspace.yaml'), 'packages:\n  - .\n\nminimumReleaseAge: 2880\n')
+      expect(ensureReleaseAgePolicy(dir)).toBe('present')
+      expect(readFileSync(join(dir, 'pnpm-workspace.yaml'), 'utf8')).toContain('minimumReleaseAge: 2880')
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })
