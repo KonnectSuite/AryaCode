@@ -48,10 +48,10 @@ export interface StarterPlugin {
 export const STARTER_PLUGINS: readonly StarterPlugin[] = [
   {
     name: '@aryacode/dsh-arya-market',
-    range: '^1.70.1-arya.0.3',
-    version: '1.70.1-arya.0.3',
-    tarball: 'aryacode-dsh-arya-market-1.70.1-arya.0.3.tgz',
-    integrity: 'sha512-va98wX022ypwIO0+AQ0kzMDQAoLQcGQUc/KjQT9uqYtyN1K8QBnT0ev1v+zEAFE3zz0Id0SA8PWIFRKLHwamSg==',
+    range: '^1.70.1-arya.0.4',
+    version: '1.70.1-arya.0.4',
+    tarball: 'aryacode-dsh-arya-market-1.70.1-arya.0.4.tgz',
+    integrity: 'sha512-BQz1y5fe87zDJpsfEe3kLnhr05dWgF+n7SDz5TgzSFaICCzpFLUx7oYvTFdou+WnORD0ppr5+tJJHPSeH/AZsg==',
   },
   {
     name: '@aryacode/dsh-engineering',
