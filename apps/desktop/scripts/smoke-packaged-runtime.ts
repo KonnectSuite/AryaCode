@@ -20,3 +20,6 @@ const descriptor = await verifyDesktopRuntime(paths.dsh, readDesktopRuntime(path
   resolveDesktopPackageTarget(target))
 if (windows && !values.unsigned) await verifyWindowsCode(application)
 await smokePreparedRuntime(join(resources, 'app.asar', 'dsh'), executable, join(resources, 'runtime'), descriptor)
+// The smoke's Host child can leave its channel open after exiting; the checks are the verdict, and
+// packaging must not wait on a handle that has nothing left to do.
+process.exit(0)
