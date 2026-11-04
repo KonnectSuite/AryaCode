@@ -187,8 +187,18 @@ export function apply(ctx) {
     console.log('desktop runtime: DOCX, XLSX, PPTX to PDF and skill CLI discovery passed')
   } finally {
     clearTimeout(timer)
-    try { await host.stop() } finally {
-      await rm(home, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 })
+    // The functional checks above are the smoke's verdict; teardown must not be able to hold the
+    // packaging run open when the Host's exit handshake never settles.
+    console.log('desktop runtime: smoke teardown: stopping the Host')
+    const bounded = (work: Promise<void>, label: string): Promise<void> => Promise.race([work, new Promise<void>((resolve) => {
+      setTimeout(() => { console.log(`desktop runtime: smoke teardown: ${label} did not settle; continuing`); resolve() }, 20_000)
+    })])
+    try {
+      await bounded(host.stop(), 'Host stop')
+      console.log('desktop runtime: smoke teardown: Host stopped')
+    } finally {
+      await bounded(rm(home, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 }), 'home removal')
+      console.log('desktop runtime: smoke teardown: home removed')
     }
   }
 }
