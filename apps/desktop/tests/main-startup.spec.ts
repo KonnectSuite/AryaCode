@@ -86,6 +86,8 @@ const harness = await vi.hoisted(async () => {
     readonly webContents = Object.assign(new EventEmitter(), {
       id: 42,
       setWindowOpenHandler: vi.fn(),
+      replaceMisspelling: vi.fn(),
+      session: { addWordToSpellCheckerDictionary: vi.fn() },
       insertCSS: vi.fn(async () => 'blur'),
       removeInsertedCSS: vi.fn(async () => {}),
       openDevTools: vi.fn(),
@@ -574,7 +576,8 @@ describe('desktop main startup', () => {
     expect(visible.map(item => item.role === 'quit' ? 'quit' : item.label ?? item.type)).toEqual([
       messages.aboutMenu, 'separator', messages.checkUpdatesMenu,
       ...platform === 'linux' ? [] : [messages.cliCommandMenu],
-      'separator', ...packaged ? [] : [messages.reloadPageMenu, messages.restartAppHostMenu],
+      'separator', messages.restartAppHostMenu,
+      ...packaged ? [] : [messages.reloadPageMenu],
       messages.toggleDevToolsMenu, 'separator',
       ...platform === 'darwin' ? [messages.hideApplication, messages.hideOtherApplications, messages.showAllApplications, 'separator'] : [],
       'quit',
@@ -1020,11 +1023,11 @@ describe('desktop main startup', () => {
     harness.ipcOn.mock.calls.find(([channel]) => channel === DESKTOP_IPC.localeChanged)![1](event, 'zh')
     listener(event, 'zh-CN', 'rgb(249, 250, 251)', '#0f1115')
     expect(window.setTitleBarOverlay).toHaveBeenCalledWith({ color: 'rgb(249, 250, 251)', symbolColor: '#0f1115' })
-    window.webContents.emit('context-menu', {}, { isEditable: false, selectionText: 'text', editFlags: { canCopy: true } })
+    window.webContents.emit('context-menu', {}, { isEditable: false, selectionText: 'text', editFlags: { canCopy: true }, misspelledWord: '', dictionarySuggestions: [] })
     expect(harness.menu.buildFromTemplate).toHaveBeenLastCalledWith([{ role: 'copy', enabled: true, label: '复制', accelerator: '' }])
     harness.ipcOn.mock.calls.find(([channel]) => channel === DESKTOP_IPC.localeChanged)![1](event, 'en')
     listener(event, 'en', '#1b1b1c', '#f9fafb')
-    window.webContents.emit('context-menu', {}, { isEditable: false, selectionText: 'text', editFlags: { canCopy: true } })
+    window.webContents.emit('context-menu', {}, { isEditable: false, selectionText: 'text', editFlags: { canCopy: true }, misspelledWord: '', dictionarySuggestions: [] })
     expect(harness.menu.buildFromTemplate).toHaveBeenLastCalledWith([{ role: 'copy', enabled: true, label: 'Copy', accelerator: '' }])
     window.setTitleBarOverlay.mockClear()
     listener(event, 'en', 'url(file:///bad)', '#fff')
@@ -1237,7 +1240,7 @@ describe('desktop main startup', () => {
     const editFlags = { canUndo: true, canRedo: false, canCut: true, canCopy: true, canPaste: true, canSelectAll: true }
     harness.menu.mockClear()
 
-    window.webContents.emit('context-menu', {}, { isEditable: true, selectionText: 'text', editFlags })
+    window.webContents.emit('context-menu', {}, { isEditable: true, selectionText: 'text', editFlags, misspelledWord: '', dictionarySuggestions: [] })
     expect(harness.menu).toHaveBeenLastCalledWith([
       { role: 'undo', enabled: true, accelerator: '' }, { role: 'redo', enabled: false, accelerator: '' },
       { type: 'separator', accelerator: '' },
@@ -1247,12 +1250,44 @@ describe('desktop main startup', () => {
     ])
     expect(harness.popup).toHaveBeenCalledWith({ window })
 
-    window.webContents.emit('context-menu', {}, { isEditable: false, selectionText: 'text', editFlags })
+    window.webContents.emit('context-menu', {}, { isEditable: false, selectionText: 'text', editFlags, misspelledWord: '', dictionarySuggestions: [] })
     expect(harness.menu).toHaveBeenLastCalledWith([{ role: 'copy', enabled: true, accelerator: '' }])
 
     harness.menu.mockClear()
-    window.webContents.emit('context-menu', {}, { isEditable: false, selectionText: '', editFlags })
+    window.webContents.emit('context-menu', {}, { isEditable: false, selectionText: '', editFlags, misspelledWord: '', dictionarySuggestions: [] })
     expect(harness.menu).not.toHaveBeenCalled()
+  })
+
+  it('offers spelling suggestions and Add to dictionary for a misspelled word', async () => {
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
+    await import('../src/main.ts')
+    await harness.preparing.promise
+    const window = harness.windows[0]!
+    const editFlags = { canUndo: true, canRedo: false, canCut: true, canCopy: true, canPaste: true, canSelectAll: true }
+    harness.menu.mockClear()
+
+    window.webContents.emit('context-menu', {}, {
+      isEditable: true, selectionText: 'helo', editFlags, misspelledWord: 'helo', dictionarySuggestions: ['hello', 'help'],
+    })
+    const template = harness.menu.mock.lastCall![0]
+    expect(template.map(item => item.label ?? item.type)).toEqual([
+      'hello', 'help', 'separator',
+      'Undo', 'Redo', 'separator', 'Cut', 'Copy', 'Paste', 'separator', 'Select All',
+      'separator', 'Add to dictionary',
+    ])
+    ;(template[0]!.click as () => void)()
+    expect(window.webContents.replaceMisspelling).toHaveBeenCalledWith('hello')
+    ;(template.at(-1)!.click as () => void)()
+    expect(window.webContents.session.addWordToSpellCheckerDictionary).toHaveBeenCalledWith('helo')
+
+    harness.menu.mockClear()
+    window.webContents.emit('context-menu', {}, {
+      isEditable: true, selectionText: 'helo', editFlags, misspelledWord: 'helo', dictionarySuggestions: [],
+    })
+    expect(harness.menu.mock.lastCall![0].map(item => item.label ?? item.type)).toEqual([
+      'Undo', 'Redo', 'separator', 'Cut', 'Copy', 'Paste', 'separator', 'Select All',
+      'separator', 'Add to dictionary',
+    ])
   })
 
   it('opens message links externally while retaining same-origin application navigation', async () => {

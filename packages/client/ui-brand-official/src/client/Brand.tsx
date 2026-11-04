@@ -94,7 +94,7 @@ export function OfficialBrandName({ size = 20, className }: BrandMarkProps) {
         </linearGradient>
       </defs>
       <path d={WORDMARK_ARYA} fill="currentColor" />
-      <path d={WORDMARK_CODE} transform={'translate(' + WORDMARK_OFFSET + ' 0)'} fill="url(#arya-code-word)" />
+      <path d={WORDMARK_CODE} transform={`translate(${WORDMARK_OFFSET} 0)`} fill="url(#arya-code-word)" />
     </svg>
   )
 }

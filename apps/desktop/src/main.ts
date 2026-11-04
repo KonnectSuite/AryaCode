@@ -358,8 +358,18 @@ function createWindow(preload: string, show = false, primary = false): BrowserWi
     window.on('restore', applyBackdrop)
     window.on('show', applyBackdrop)
   }
-  window.webContents.on('context-menu', (_event, { isEditable, selectionText, editFlags }) => {
+  window.webContents.on('context-menu', (_event, {
+    isEditable, selectionText, editFlags, misspelledWord, dictionarySuggestions,
+  }) => {
     const items: MenuItemConstructorOptions[] = []
+    // Chromium reports the word under the pointer only to the main process, so this menu is the
+    // only place a spelling correction can be offered.
+    if (misspelledWord !== '' && dictionarySuggestions.length > 0) {
+      for (const suggestion of dictionarySuggestions) {
+        items.push({ label: suggestion, click: () => { window.webContents.replaceMisspelling(suggestion) } })
+      }
+      items.push({ type: 'separator' })
+    }
     if (isEditable) {
       items.push(
         { role: 'undo', enabled: editFlags.canUndo },
@@ -371,6 +381,16 @@ function createWindow(preload: string, show = false, primary = false): BrowserWi
         { type: 'separator' },
         { role: 'selectAll', enabled: editFlags.canSelectAll },
       )
+      // Electron implements the dictionary API on Windows and macOS only.
+      if (misspelledWord !== '' && (process.platform === 'win32' || process.platform === 'darwin')) {
+        items.push(
+          { type: 'separator' },
+          {
+            label: currentDesktopLocale().messages.addToDictionary,
+            click: () => { window.webContents.session.addWordToSpellCheckerDictionary(misspelledWord) },
+          },
+        )
+      }
     } else if (selectionText.length > 0) {
       items.push({ role: 'copy', enabled: editFlags.canCopy })
     }

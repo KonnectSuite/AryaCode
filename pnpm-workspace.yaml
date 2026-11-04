@@ -105,7 +105,12 @@ minimumReleaseAgeExclude:
   - pnpm@11.28.5
   # Desktop packaging requires this Electron fingerprint with node-addon-require-builtin 0.1.9.
   - electron@44.7.0
-  - '@aryacode/dsh-arya-market@1.70.1-arya.0.1'
+  - '@aryacode/dsh-arya-market@1.73.10-arya.0.1'
+  - '@deepseek-ai/cordis-plugin-group@1.0.6-alpha.2'
+  - '@deepseek-ai/cordis-plugin-include@1.0.11-alpha.2'
+  - '@deepseek-ai/cordis-plugin-loader@1.0.7-alpha.2'
+  - '@deepseek-ai/cordis-plugin-timer@1.1.8-alpha.2'
+  - '@deepseek-ai/cordis@4.0.6-alpha.2'
 patchedDependencies:
   '@botiverse/oar@0.67.0': patches/@botiverse__oar@0.67.0.patch
   '@earendil-works/pi-ai@1.3.0': patches/@earendil-works__pi-ai@1.3.0.patch

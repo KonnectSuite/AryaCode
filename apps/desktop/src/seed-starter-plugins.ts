@@ -232,7 +232,7 @@ export async function seedStarterPlugins(
         env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
         windowsHide: true,
       })
-      onOutput(`${run.stdout ?? ''}${run.stderr ?? ''}`)
+      onOutput(`${run.stdout}${run.stderr}`)
       if (run.status !== 0) {
         failed.push({ name: plugin.name, reason: `pnpm exited ${String(run.status)}` })
         continue
