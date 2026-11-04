@@ -195,3 +195,6 @@ async function main(): Promise<void> {
 }
 
 await main()
+// The packaged-runtime smoke can leave its Host child's channel open after exit. Every step has
+// already recorded its result, so end the process instead of letting packaging wait on a handle.
+process.exit(0)
